@@ -32,6 +32,11 @@ export default function App() {
     if (e.key === "Enter") run(() => ws.send());
     else if (e.shiftKey && key === "t") run(() => ws.setSpaceTheme(ws.space.id, nextTheme(theme)));
     else if (key === "k") run(() => setPalette((p) => !p));
+    else if (key === "e") run(() => {
+      // Cycles through the space's environments, then none.
+      const ids = [...ws.space.envs.map((x) => x.id), null];
+      ws.selectEnv(ids[(ids.indexOf(ws.space.envId) + 1) % ids.length]);
+    });
     else if (key === "n") run(ws.addReq);
     else if (key === "d") run(() => ws.duplicateReq(ws.req.id));
     else if (/^[1-9]$/.test(e.key) && ws.spaces[+e.key - 1]) run(() => ws.selectSpace(ws.spaces[+e.key - 1].id));

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { sendRequest, type Header, type SendResult } from "./api";
 import { DEFAULT_THEME, isThemeId, type ThemeId } from "./themes";
+import { withEnv } from "./env";
 
 export interface Req {
   id: string;
@@ -12,12 +13,21 @@ export interface Req {
   pinned?: boolean;
 }
 
-/** A collection of requests. Each space wears its own theme. */
+/** A named set of variables, filled into `{{name}}` when a request is sent. */
+export interface Env {
+  id: string;
+  name: string;
+  vars: Header[];
+}
+
+/** A collection of requests. Each space wears its own theme and has its own environments. */
 export interface Space {
   id: string;
   name: string;
   theme: ThemeId;
   requests: Req[];
+  envs: Env[];
+  envId: string | null;
 }
 
 export interface Outcome {
@@ -49,6 +59,7 @@ export function reqTitle(r: Req): string {
 }
 
 function starter(): Space[] {
+  const playground: Env = { id: uid(), name: "httpbin", vars: [["host", "https://httpbin.org"]] };
   return [
     {
       id: uid(),
@@ -59,18 +70,22 @@ function starter(): Space[] {
         newReq({
           name: "Echo a JSON body",
           method: "POST",
-          url: "https://httpbin.org/post",
+          url: "{{host}}/post",
           headers: [["Content-Type", "application/json"]],
           body: '{\n  "duck": "Sir Quacks-a-lot",\n  "mood": "curious"\n}',
         }),
         newReq({ name: "GitHub user", url: "https://api.github.com/users/octocat", pinned: true }),
       ],
+      envs: [playground],
+      envId: playground.id,
     },
     {
       id: uid(),
       name: "Weather",
       theme: "sage",
       requests: [newReq({ name: "Forecast", url: "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m" })],
+      envs: [],
+      envId: null,
     },
   ];
 }
@@ -88,6 +103,11 @@ interface Saved {
 const isStr = (v: unknown): v is string => typeof v === "string";
 const isHeader = (h: unknown): h is Header => Array.isArray(h) && h.length === 2 && h.every(isStr);
 
+function isEnv(e: unknown): e is Env {
+  const o = e as Env;
+  return !!o && isStr(o.id) && isStr(o.name) && Array.isArray(o.vars) && o.vars.every(isHeader);
+}
+
 function isReq(r: unknown): r is Req {
   const o = r as Req;
   return !!o && isStr(o.id) && isStr(o.name) && isStr(o.method) && isStr(o.url) && isStr(o.body) && Array.isArray(o.headers) && o.headers.every(isHeader);
@@ -102,11 +122,14 @@ function load(): Saved {
       .slice(0, MAX_SPACES)
       .map((sp): Space => {
         const requests = sp.requests.filter(isReq);
+        const envs = Array.isArray(sp.envs) ? sp.envs.filter(isEnv) : [];
         return {
           id: sp.id,
           name: sp.name,
           theme: isThemeId(sp.theme) ? sp.theme : DEFAULT_THEME,
           requests: requests.length ? requests : [newReq()],
+          envs,
+          envId: envs.some((e) => e.id === sp.envId) ? sp.envId : null,
         };
       });
     if (s && spaces.length) return { spaces, spaceId: s.spaceId, reqId: s.reqId };
@@ -137,6 +160,8 @@ export function useWorkspaceState() {
   const { spaces } = saved;
   const space = spaces.find((s) => s.id === saved.spaceId) ?? spaces[0];
   const req = space.requests.find((r) => r.id === saved.reqId) ?? space.requests[0];
+  const env = space.envs.find((e) => e.id === space.envId) ?? null;
+  const vars = env?.vars ?? [];
 
   const actions = useMemo(() => {
     const mapSpace = (id: string, f: (s: Space) => Space) => setSaved((st) => ({ ...st, spaces: st.spaces.map((s) => (s.id === id ? f(s) : s)) }));
@@ -197,7 +222,7 @@ export function useWorkspaceState() {
           if (st.spaces.length >= MAX_SPACES) return st;
           const r = newReq();
           const theme = (st.spaces.find((s) => s.id === st.spaceId) ?? st.spaces[0]).theme;
-          const sp: Space = { id: uid(), name: `Space ${st.spaces.length + 1}`, theme, requests: [r] };
+          const sp: Space = { id: uid(), name: `Space ${st.spaces.length + 1}`, theme, requests: [r], envs: [], envId: null };
           return { spaces: [...st.spaces, sp], spaceId: sp.id, reqId: r.id };
         });
       },
@@ -209,6 +234,30 @@ export function useWorkspaceState() {
       },
       setAllThemes(theme: ThemeId) {
         setSaved((st) => ({ ...st, spaces: st.spaces.map((s) => ({ ...s, theme })) }));
+      },
+      selectEnv(envId: string | null) {
+        setSaved((st) => ({ ...st, spaces: st.spaces.map((s) => (s.id === st.spaceId ? { ...s, envId } : s)) }));
+      },
+      addEnv() {
+        const id = uid();
+        setSaved((st) => ({
+          ...st,
+          spaces: st.spaces.map((s) =>
+            s.id === st.spaceId ? { ...s, envId: id, envs: [...s.envs, { id, name: s.envs.length ? `Environment ${s.envs.length + 1}` : "Development", vars: [["", ""]] }] } : s,
+          ),
+        }));
+      },
+      updateEnv(envId: string, patch: Partial<Omit<Env, "id">>) {
+        setSaved((st) => ({ ...st, spaces: st.spaces.map((s) => ({ ...s, envs: s.envs.map((e) => (e.id === envId ? { ...e, ...patch } : e)) })) }));
+      },
+      deleteEnv(envId: string) {
+        setSaved((st) => ({
+          ...st,
+          spaces: st.spaces.map((s) => {
+            const envs = s.envs.filter((e) => e.id !== envId);
+            return envs.length === s.envs.length ? s : { ...s, envs, envId: s.envId === envId ? null : s.envId };
+          }),
+        }));
       },
       deleteSpace(id: string) {
         setSaved((st) => {
@@ -226,11 +275,12 @@ export function useWorkspaceState() {
     const seq = (outcomes[r.id]?.seq ?? 0) + 1;
     setOutcomes((o) => ({ ...o, [r.id]: { ...o[r.id], sending: true, seq: o[r.id]?.seq ?? 0 } }));
     try {
+      const filled = withEnv(r, vars);
       const result = await sendRequest({
-        method: r.method,
-        url: r.url,
-        headers: r.headers.filter(([k]) => k.trim()),
-        body: BODYLESS.has(r.method) ? undefined : r.body,
+        method: filled.method,
+        url: filled.url,
+        headers: filled.headers.filter(([k]) => k.trim()),
+        body: BODYLESS.has(filled.method) ? undefined : filled.body,
         timeoutMs: 30_000,
       });
       setOutcomes((o) => ({ ...o, [r.id]: { sending: false, result, seq } }));
@@ -239,7 +289,7 @@ export function useWorkspaceState() {
     }
   }
 
-  return { spaces, space, req, outcome: outcomes[req.id] as Outcome | undefined, send, ...actions };
+  return { spaces, space, req, env, vars, outcome: outcomes[req.id] as Outcome | undefined, send, ...actions };
 }
 
 export type Workspace = ReturnType<typeof useWorkspaceState>;
@@ -261,7 +311,8 @@ function decode(s: string) {
   }
 }
 
-const encode = (s: string) => encodeURIComponent(s).replace(/%2F/g, "/").replace(/%3A/g, ":").replace(/%2C/g, ",");
+// Keeps URLs readable, and leaves {{variables}} intact.
+const encode = (s: string) => encodeURIComponent(s).replace(/%2F/g, "/").replace(/%3A/g, ":").replace(/%2C/g, ",").replace(/%7B/g, "{").replace(/%7D/g, "}");
 
 export function parseParams(url: string): Header[] {
   const q = url.indexOf("?");

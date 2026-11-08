@@ -5,6 +5,7 @@ import { BODYLESS, METHODS, parseParams, withParams, type Outcome, type Req } fr
 import { MODES, THEMES, type Mode, type ThemeId } from "./themes";
 import { Duck } from "./Duck";
 import { isCurl, parseCurl, toCurl } from "./curl";
+import { hasVars, resolve, withEnv } from "./env";
 
 /* ─── Small helpers ─────────────────────────────────────────────────────── */
 
@@ -72,6 +73,7 @@ export const ICONS = {
   copy: "M5.5 5.5V3a1 1 0 0 1 1-1H13a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1h-2.5M3 5.5h6.5a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1z",
   check: "M3.5 8.5l3 3 6-7",
   terminal: "M2.5 4l3.5 4-3.5 4M8 12.5h5.5",
+  braces: "M5.5 2.5c-1.4 0-2 .6-2 2V6c0 1.1-.6 2-1.5 2 .9 0 1.5.9 1.5 2v1.5c0 1.4.6 2 2 2M10.5 2.5c1.4 0 2 .6 2 2V6c0 1.1.6 2 1.5 2-.9 0-1.5.9-1.5 2v1.5c0 1.4-.6 2-2 2",
   palette: "M8 14.5A6.5 6.5 0 1 1 14.5 8c0 1.5-1.2 2.3-2.5 2.3h-1.3a1.2 1.2 0 0 0-.8 2.1c.5.6.1 2.1-1.9 2.1zM4.8 7.5h0M6.8 4.8h0M10 4.8h0",
 };
 
@@ -91,8 +93,8 @@ export function CopyButton({ label, text, icon = ICONS.copy }: { label: string; 
   );
 }
 
-/** The request as a cURL command; the body is left out for methods that can't carry one. */
-export const reqCurl = (r: Req) => toCurl(r, !BODYLESS.has(r.method));
+/** The request as a cURL command with variables filled in; the body is left out for methods that can't carry one. */
+export const reqCurl = (r: Req, vars: Header[]) => toCurl(withEnv(r, vars), !BODYLESS.has(r.method));
 
 /* ─── Menus ─────────────────────────────────────────────────────────────── */
 
@@ -342,40 +344,55 @@ function MethodPicker({ value, onChange }: { value: string; onChange: (m: string
 }
 
 /** Method, URL and Send in one bar. */
-export function UrlBar({ req, outcome, onChange, onSend }: { req: Req; outcome?: Outcome; onChange: (p: Partial<Req>) => void; onSend: () => void }) {
+export function UrlBar({ req, vars, outcome, onChange, onSend }: { req: Req; vars: Header[]; outcome?: Outcome; onChange: (p: Partial<Req>) => void; onSend: () => void }) {
   const sending = !!outcome?.sending;
   return (
-    <form
-      className="urlbar flex items-center"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSend();
-      }}
-    >
-      <MethodPicker value={req.method} onChange={(method) => onChange({ method })} />
-      <input
-        value={req.url}
-        onChange={(e) => onChange({ url: e.target.value })}
-        onPaste={(e) => {
-          // Pasting a whole cURL command fills in the request instead of the URL.
-          const text = e.clipboardData.getData("text");
-          const parsed = isCurl(text) && parseCurl(text);
-          if (!parsed) return;
+    <div>
+      <form
+        className="urlbar flex items-center"
+        onSubmit={(e) => {
           e.preventDefault();
-          onChange(parsed);
+          onSend();
         }}
-        placeholder="Paste a URL or a cURL command"
-        spellCheck={false}
-        className="min-w-0 flex-1 bg-transparent px-3 font-mono text-[13px] text-text outline-none placeholder:text-muted/70"
-      />
-      <button type="submit" disabled={sending || !req.url.trim()} className="send-btn">
-        {sending ? <Spinner /> : "Send"}
-      </button>
-    </form>
+      >
+        <MethodPicker value={req.method} onChange={(method) => onChange({ method })} />
+        <input
+          value={req.url}
+          onChange={(e) => onChange({ url: e.target.value })}
+          onPaste={(e) => {
+            // Pasting a whole cURL command fills in the request instead of the URL.
+            const text = e.clipboardData.getData("text");
+            const parsed = isCurl(text) && parseCurl(text);
+            if (!parsed) return;
+            e.preventDefault();
+            onChange(parsed);
+          }}
+          placeholder="Paste a URL or a cURL command"
+          spellCheck={false}
+          className="min-w-0 flex-1 bg-transparent px-3 font-mono text-[13px] text-text outline-none placeholder:text-muted/70"
+        />
+        <button type="submit" disabled={sending || !req.url.trim()} className="send-btn">
+          {sending ? <Spinner /> : "Send"}
+        </button>
+      </form>
+      {hasVars(req.url) && <Resolved url={req.url} vars={vars} />}
+    </div>
   );
 }
 
-function KVEditor({ rows, onChange, keyLabel }: { rows: Header[]; onChange: (r: Header[]) => void; keyLabel: string }) {
+/** The URL as it will be sent, with any variables that have no value called out. */
+function Resolved({ url, vars }: { url: string; vars: Header[] }) {
+  const { text, missing } = resolve(url, vars);
+  return (
+    <div className="flex min-w-0 items-center gap-2 px-3 pt-1.5 font-mono text-[11.5px] text-muted">
+      <span className="shrink-0 text-muted/60">→</span>
+      <span className="truncate">{text}</span>
+      {missing.length > 0 && <span className="shrink-0 text-err">{missing.map((m) => `{{${m}}}`).join(" ")} not set</span>}
+    </div>
+  );
+}
+
+export function KVEditor({ rows, onChange, keyLabel }: { rows: Header[]; onChange: (r: Header[]) => void; keyLabel: string }) {
   const set = (i: number, h: Header) => onChange(rows.map((x, j) => (j === i ? h : x)));
   const field =
     "h-8 rounded-[6px] bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/60 hover:bg-raised/70 focus:bg-raised";
@@ -426,7 +443,7 @@ function ParamsEditor({ url, onChange }: { url: string; onChange: (url: string) 
 
 type ReqTab = "params" | "headers" | "body";
 
-export function RequestEditor({ req, onChange }: { req: Req; onChange: (p: Partial<Req>) => void }) {
+export function RequestEditor({ req, vars, onChange }: { req: Req; vars: Header[]; onChange: (p: Partial<Req>) => void }) {
   const [tab, setTab] = useState<ReqTab>("params");
   const params = parseParams(req.url).length;
   const headers = req.headers.filter(([k]) => k.trim()).length;
@@ -442,7 +459,7 @@ export function RequestEditor({ req, onChange }: { req: Req; onChange: (p: Parti
             ["body", "Body"],
           ]}
         />
-        <CopyButton label="cURL" icon={ICONS.terminal} text={() => reqCurl(req)} />
+        <CopyButton label="cURL" icon={ICONS.terminal} text={() => reqCurl(req, vars)} />
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {tab === "params" ? (

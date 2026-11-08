@@ -6,7 +6,7 @@
 
 <p align="center">A fast, good-looking, open source API client for the desktop. Send a request, see what comes back.</p>
 
-> Early development. Environments and history are next.
+> Early development. History and auth helpers are next.
 
 ## Download
 
@@ -20,6 +20,7 @@ Builds aren't code-signed yet. On Windows, SmartScreen may warn: choose "More in
 - Spaces: up to nine collections of saved requests, each wearing its own theme, plus pinned favourites
 - A command bar (`Ctrl+K`) to jump to any request or space and run actions
 - Edit query params as rows, kept in sync with the URL
+- Environments per space: `{{variables}}` in URLs, headers and bodies, switched with `Ctrl+E`
 - Paste a cURL command into the URL bar to import it; copy any request back out as cURL
 - Four themes, Honey, Sage, Periwinkle and Ink (square and technical), each in light and dark (or following your system), with an optional accent glow (`Ctrl+Shift+T` cycles themes)
 - Cookies, redirects and gzip/brotli/zstd decoding handled for you
@@ -33,6 +34,7 @@ Builds aren't code-signed yet. On Windows, SmartScreen may warn: choose "More in
 | `Ctrl+K` | Command bar |
 | `Ctrl+N` / `Ctrl+D` | New / duplicate request |
 | `Ctrl+1`…`9` | Switch space |
+| `Ctrl+E` | Next environment |
 | `Ctrl+Shift+T` | Next theme for this space |
 
 ## Stack
