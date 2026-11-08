@@ -4,6 +4,7 @@ import { isTauri, type Header, type SendResult } from "./api";
 import { BODYLESS, METHODS, parseParams, withParams, type Outcome, type Req } from "./store";
 import { MODES, THEMES, type Mode, type ThemeId } from "./themes";
 import { Duck } from "./Duck";
+import { isCurl, parseCurl, toCurl } from "./curl";
 
 /* ─── Small helpers ─────────────────────────────────────────────────────── */
 
@@ -69,8 +70,29 @@ export const ICONS = {
   search: "M7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10zM14 14l-3.5-3.5",
   pin: "M9.5 2.5l4 4-2 1-2.5 2.5.5 3-1.5 1.5-2.5-2.5L3 14.5 1.5 13l2.5-2.5L1.5 8 3 6.5l3 .5L8.5 4.5z",
   copy: "M5.5 5.5V3a1 1 0 0 1 1-1H13a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1h-2.5M3 5.5h6.5a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1z",
+  check: "M3.5 8.5l3 3 6-7",
+  terminal: "M2.5 4l3.5 4-3.5 4M8 12.5h5.5",
   palette: "M8 14.5A6.5 6.5 0 1 1 14.5 8c0 1.5-1.2 2.3-2.5 2.3h-1.3a1.2 1.2 0 0 0-.8 2.1c.5.6.1 2.1-1.9 2.1zM4.8 7.5h0M6.8 4.8h0M10 4.8h0",
 };
+
+/** Copies to the clipboard and briefly confirms it. */
+export function CopyButton({ label, text, icon = ICONS.copy }: { label: string; text: () => string; icon?: string }) {
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(() => setDone(false), 1400);
+    return () => clearTimeout(t);
+  }, [done]);
+  return (
+    <button type="button" onClick={() => navigator.clipboard.writeText(text()).then(() => setDone(true))} className="btn btn-ghost voice h-7 gap-1.5 px-2.5 text-xs">
+      <Icon d={done ? ICONS.check : icon} className="size-3.5" />
+      {done ? "Copied" : label}
+    </button>
+  );
+}
+
+/** The request as a cURL command; the body is left out for methods that can't carry one. */
+export const reqCurl = (r: Req) => toCurl(r, !BODYLESS.has(r.method));
 
 /* ─── Menus ─────────────────────────────────────────────────────────────── */
 
@@ -334,7 +356,15 @@ export function UrlBar({ req, outcome, onChange, onSend }: { req: Req; outcome?:
       <input
         value={req.url}
         onChange={(e) => onChange({ url: e.target.value })}
-        placeholder="Paste a URL, like api.github.com/users/octocat"
+        onPaste={(e) => {
+          // Pasting a whole cURL command fills in the request instead of the URL.
+          const text = e.clipboardData.getData("text");
+          const parsed = isCurl(text) && parseCurl(text);
+          if (!parsed) return;
+          e.preventDefault();
+          onChange(parsed);
+        }}
+        placeholder="Paste a URL or a cURL command"
         spellCheck={false}
         className="min-w-0 flex-1 bg-transparent px-3 font-mono text-[13px] text-text outline-none placeholder:text-muted/70"
       />
@@ -412,6 +442,7 @@ export function RequestEditor({ req, onChange }: { req: Req; onChange: (p: Parti
             ["body", "Body"],
           ]}
         />
+        <CopyButton label="cURL" icon={ICONS.terminal} text={() => reqCurl(req)} />
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {tab === "params" ? (
@@ -462,6 +493,7 @@ export function ResponseView({ outcome, meta }: { outcome?: Outcome; meta: (r: S
             ["headers", "Headers", r.headers.length],
           ]}
         />
+        <CopyButton label="Copy" text={() => (tab === "body" ? r.body : r.headers.map(([k, v]) => `${k}: ${v}`).join("\n"))} />
       </div>
       <div className="min-h-0 flex-1 overflow-auto rounded-box border border-line bg-bg/60 p-3">
         {tab === "body" ? (

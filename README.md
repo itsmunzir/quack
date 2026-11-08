@@ -20,6 +20,7 @@ Builds aren't code-signed yet. On Windows, SmartScreen may warn: choose "More in
 - Spaces: up to nine collections of saved requests, each wearing its own theme, plus pinned favourites
 - A command bar (`Ctrl+K`) to jump to any request or space and run actions
 - Edit query params as rows, kept in sync with the URL
+- Paste a cURL command into the URL bar to import it; copy any request back out as cURL
 - Four themes, Honey, Sage, Periwinkle and Ink (square and technical), each in light and dark (or following your system), with an optional accent glow (`Ctrl+Shift+T` cycles themes)
 - Cookies, redirects and gzip/brotli/zstd decoding handled for you
 - Small and fast: a native app, not Electron
