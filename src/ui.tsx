@@ -5,7 +5,8 @@ import { BODYLESS, METHODS, parseParams, withParams, type Outcome, type Req } fr
 import { MODES, THEMES, type Mode, type ThemeId } from "./themes";
 import { Duck } from "./Duck";
 import { isCurl, parseCurl, toCurl } from "./curl";
-import { hasVars, resolve, withEnv } from "./env";
+import { hasVars, prepare, resolve } from "./env";
+import { AUTH_TYPES, blankAuth, type Auth } from "./auth";
 
 /* ─── Small helpers ─────────────────────────────────────────────────────── */
 
@@ -94,7 +95,7 @@ export function CopyButton({ label, text, icon = ICONS.copy }: { label: string; 
 }
 
 /** The request as a cURL command with variables filled in; the body is left out for methods that can't carry one. */
-export const reqCurl = (r: Req, vars: Header[]) => toCurl(withEnv(r, vars), !BODYLESS.has(r.method));
+export const reqCurl = (r: Req, vars: Header[]) => toCurl(prepare(r, vars), !BODYLESS.has(r.method));
 
 /* ─── Menus ─────────────────────────────────────────────────────────────── */
 
@@ -267,7 +268,8 @@ function TauriWindowControls() {
 
 /* ─── Tabs ──────────────────────────────────────────────────────────────── */
 
-type TabOpt<T> = [id: T, label: string, count?: number];
+/** A tab, with an optional count or, when `true`, a dot marking it as set. */
+type TabOpt<T> = [id: T, label: string, badge?: number | boolean];
 
 /** Pill tabs with a thumb that slides to the active tab. */
 function Tabs<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: TabOpt<T>[] }) {
@@ -296,7 +298,7 @@ function Tabs<T extends string>({ value, onChange, options }: { value: T; onChan
           className={`voice relative z-10 flex h-7 items-center gap-1.5 rounded-btn px-3 text-xs font-medium transition-colors ${id === value ? "text-text" : "text-muted hover:text-text"}`}
         >
           {label}
-          {count ? <span className="font-mono text-[10px] text-muted">{count}</span> : null}
+          {count === true ? <span className="size-1.5 rounded-full bg-accent" /> : count ? <span className="font-mono text-[10px] text-muted">{count}</span> : null}
         </button>
       ))}
     </div>
@@ -380,6 +382,60 @@ export function UrlBar({ req, vars, outcome, onChange, onSend }: { req: Req; var
   );
 }
 
+/** Bearer, Basic or API key, folded into the request when it is sent. */
+function AuthEditor({ auth, onChange }: { auth?: Auth; onChange: (a: Auth | undefined) => void }) {
+  const field =
+    "h-8 min-w-0 flex-1 rounded-[6px] bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/60 hover:bg-raised/70 focus:bg-raised";
+  const row = (label: string, input: ReactNode) => (
+    <label className="flex items-center gap-2 border-b border-line py-0.5">
+      <span className="w-24 shrink-0 px-2 text-[12.5px] text-muted">{label}</span>
+      {input}
+    </label>
+  );
+  const text = (value: string, set: (v: string) => void, placeholder: string, secret = false) => (
+    <input type={secret ? "password" : "text"} value={value} onChange={(e) => set(e.target.value)} placeholder={placeholder} spellCheck={false} autoComplete="off" className={field} />
+  );
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="max-w-sm">
+        <Segmented label="Auth type" options={AUTH_TYPES} value={auth?.type ?? "none"} onChange={(t) => onChange(blankAuth(t, auth))} />
+      </div>
+      {auth?.type === "bearer" && <div>{row("Token", text(auth.token, (token) => onChange({ ...auth, token }), "{{token}}"))}</div>}
+      {auth?.type === "basic" && (
+        <div>
+          {row("Username", text(auth.user, (user) => onChange({ ...auth, user }), "Username"))}
+          {row("Password", text(auth.pass, (pass) => onChange({ ...auth, pass }), "Password", true))}
+        </div>
+      )}
+      {auth?.type === "apikey" && (
+        <div>
+          {row("Key", text(auth.key, (key) => onChange({ ...auth, key }), "X-API-Key"))}
+          {row("Value", text(auth.value, (value) => onChange({ ...auth, value }), "{{apiKey}}"))}
+          {row(
+            "Add to",
+            <div className="w-48 py-1">
+              <Segmented label="Add to" options={API_KEY_IN} value={auth.in} onChange={(v) => onChange({ ...auth, in: v })} />
+            </div>,
+          )}
+        </div>
+      )}
+      <p className="px-2 text-[12px] text-muted">
+        {!auth
+          ? "No auth. Pick a type to have it added when the request is sent."
+          : auth.type === "apikey"
+            ? `Sent as the ${auth.in === "header" ? "header" : "query param"} ${auth.key || "…"}.`
+            : "Sent as the Authorization header, replacing any you set by hand."}{" "}
+        {auth && <>Use <code className="font-mono text-text">{"{{variables}}"}</code> to keep secrets in an environment.</>}
+      </p>
+    </div>
+  );
+}
+
+const API_KEY_IN = [
+  { id: "header", name: "Header" },
+  { id: "query", name: "Query" },
+] as const;
+
 /** The URL as it will be sent, with any variables that have no value called out. */
 function Resolved({ url, vars }: { url: string; vars: Header[] }) {
   const { text, missing } = resolve(url, vars);
@@ -441,7 +497,7 @@ function ParamsEditor({ url, onChange }: { url: string; onChange: (url: string) 
   );
 }
 
-type ReqTab = "params" | "headers" | "body";
+type ReqTab = "params" | "headers" | "auth" | "body";
 
 export function RequestEditor({ req, vars, onChange }: { req: Req; vars: Header[]; onChange: (p: Partial<Req>) => void }) {
   const [tab, setTab] = useState<ReqTab>("params");
@@ -456,6 +512,7 @@ export function RequestEditor({ req, vars, onChange }: { req: Req; vars: Header[
           options={[
             ["params", "Params", params || undefined],
             ["headers", "Headers", headers || undefined],
+            ["auth", "Auth", !!req.auth],
             ["body", "Body"],
           ]}
         />
@@ -466,6 +523,8 @@ export function RequestEditor({ req, vars, onChange }: { req: Req; vars: Header[
           <ParamsEditor url={req.url} onChange={(url) => onChange({ url })} />
         ) : tab === "headers" ? (
           <KVEditor rows={req.headers} onChange={(headers) => onChange({ headers })} keyLabel="Header" />
+        ) : tab === "auth" ? (
+          <AuthEditor auth={req.auth} onChange={(auth) => onChange({ auth })} />
         ) : BODYLESS.has(req.method) ? (
           <Empty title={`${req.method} requests have no body`} note="Switch the method to POST, PUT or PATCH to send one." />
         ) : (

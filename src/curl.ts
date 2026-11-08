@@ -1,7 +1,8 @@
 import type { Header } from "./api";
+import type { Auth } from "./auth";
 import type { Req } from "./store";
 
-type Parsed = Pick<Req, "method" | "url" | "headers" | "body">;
+type Parsed = Pick<Req, "method" | "url" | "headers" | "body" | "auth">;
 
 /** Splits a shell command into words, honouring quotes and line continuations (bash `\` and cmd `^`). */
 function words(cmd: string): string[] {
@@ -61,6 +62,7 @@ export function parseCurl(cmd: string): Parsed | null {
   const headers: Header[] = [];
   const data: string[] = [];
   let asQuery = false;
+  let auth: Auth | undefined;
 
   for (let i = 1; i < w.length; i++) {
     let flag = w[i];
@@ -75,12 +77,19 @@ export function parseCurl(cmd: string): Parsed | null {
     else if (flag === "-H" || flag === "--header") {
       const h = next();
       const c = h.indexOf(":");
-      if (c > 0) headers.push([h.slice(0, c).trim(), h.slice(c + 1).trim()]);
+      if (c <= 0) continue;
+      const [name, value] = [h.slice(0, c).trim(), h.slice(c + 1).trim()];
+      const bearer = /^authorization$/i.test(name) && value.match(/^Bearer\s+(.+)$/i);
+      if (bearer) auth = { type: "bearer", token: bearer[1] };
+      else headers.push([name, value]);
     } else if (DATA_FLAGS.has(flag)) data.push(next());
     else if (flag === "--json") {
       data.push(next());
       headers.push(["Content-Type", "application/json"], ["Accept", "application/json"]);
-    } else if (flag === "-u" || flag === "--user") headers.push(["Authorization", `Basic ${btoa(next())}`]);
+    } else if (flag === "-u" || flag === "--user") {
+      const [user, ...pass] = next().split(":");
+      auth = { type: "basic", user, pass: pass.join(":") };
+    }
     else if (flag === "-A" || flag === "--user-agent") headers.push(["User-Agent", next()]);
     else if (flag === "-b" || flag === "--cookie") headers.push(["Cookie", next()]);
     else if (flag === "-e" || flag === "--referer") headers.push(["Referer", next()]);
@@ -104,7 +113,7 @@ export function parseCurl(cmd: string): Parsed | null {
   } catch {
     // Not JSON; keep it as sent.
   }
-  return { method, url, headers, body };
+  return { method, url, headers, body, auth };
 }
 
 const sh = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;

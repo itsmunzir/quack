@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { sendRequest, type Header, type SendResult } from "./api";
 import { DEFAULT_THEME, isThemeId, type ThemeId } from "./themes";
-import { withEnv } from "./env";
+import { prepare } from "./env";
+import { isAuth, type Auth } from "./auth";
 
 export interface Req {
   id: string;
@@ -10,6 +11,7 @@ export interface Req {
   url: string;
   headers: Header[];
   body: string;
+  auth?: Auth;
   pinned?: boolean;
 }
 
@@ -121,7 +123,7 @@ function load(): Saved {
       .filter((sp) => sp && isStr(sp.id) && isStr(sp.name) && Array.isArray(sp.requests))
       .slice(0, MAX_SPACES)
       .map((sp): Space => {
-        const requests = sp.requests.filter(isReq);
+        const requests = sp.requests.filter(isReq).map((r) => ({ ...r, auth: isAuth(r.auth) ? r.auth : undefined }));
         const envs = Array.isArray(sp.envs) ? sp.envs.filter(isEnv) : [];
         return {
           id: sp.id,
@@ -275,7 +277,7 @@ export function useWorkspaceState() {
     const seq = (outcomes[r.id]?.seq ?? 0) + 1;
     setOutcomes((o) => ({ ...o, [r.id]: { ...o[r.id], sending: true, seq: o[r.id]?.seq ?? 0 } }));
     try {
-      const filled = withEnv(r, vars);
+      const filled = prepare(r, vars);
       const result = await sendRequest({
         method: filled.method,
         url: filled.url,
