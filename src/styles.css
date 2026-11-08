@@ -456,6 +456,12 @@ body {
   opacity: 0.5;
   pointer-events: none;
 }
+/* While a request is out, the same spot stops it. */
+.send-btn.stop {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
 
 .split {
   grid-template-columns: var(--frac) 10px var(--rest);

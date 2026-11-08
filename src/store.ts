@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { sendRequest, type Header, type SendResult } from "./api";
+import { cancelRequest, CANCELLED, sendRequest, type Header, type SendResult } from "./api";
 import { DEFAULT_THEME, isThemeId, type ThemeId } from "./themes";
 import { prepare } from "./env";
 import { isAuth, type Auth } from "./auth";
@@ -306,7 +306,7 @@ export function useWorkspaceState() {
     setOutcomes((o) => ({ ...o, [r.id]: { ...o[r.id], sending: true, seq: o[r.id]?.seq ?? 0 } }));
     try {
       const filled = prepare(r, vars);
-      const result = await sendRequest({
+      const result = await sendRequest(r.id, {
         method: filled.method,
         url: filled.url,
         headers: filled.headers.filter(([k]) => k.trim()),
@@ -316,6 +316,8 @@ export function useWorkspaceState() {
       setOutcomes((o) => ({ ...o, [r.id]: { sending: false, result, seq } }));
       record({ result });
     } catch (e) {
+      // A cancel puts back whatever was showing before; it isn't history.
+      if (String(e) === CANCELLED) return setOutcomes((o) => ({ ...o, [r.id]: { ...o[r.id], sending: false } }));
       setOutcomes((o) => ({ ...o, [r.id]: { sending: false, error: String(e), seq } }));
       record({ error: String(e) });
     }
@@ -328,7 +330,7 @@ export function useWorkspaceState() {
 
   const spaceHistory = useMemo(() => history.filter((h) => h.spaceId === space.id), [history, space.id]);
 
-  return { spaces, space, req, env, vars, history: spaceHistory, outcome: outcomes[req.id] as Outcome | undefined, send, ...actions };
+  return { spaces, space, req, env, vars, history: spaceHistory, outcome: outcomes[req.id] as Outcome | undefined, send, cancel: cancelRequest, ...actions };
 }
 
 export type Workspace = ReturnType<typeof useWorkspaceState>;

@@ -356,7 +356,21 @@ function MethodPicker({ value, onChange }: { value: string; onChange: (m: string
 }
 
 /** Method, URL and Send in one bar. */
-export function UrlBar({ req, vars, outcome, onChange, onSend }: { req: Req; vars: Header[]; outcome?: Outcome; onChange: (p: Partial<Req>) => void; onSend: () => void }) {
+export function UrlBar({
+  req,
+  vars,
+  outcome,
+  onChange,
+  onSend,
+  onCancel,
+}: {
+  req: Req;
+  vars: Header[];
+  outcome?: Outcome;
+  onChange: (p: Partial<Req>) => void;
+  onSend: () => void;
+  onCancel: () => void;
+}) {
   const sending = !!outcome?.sending;
   return (
     <div>
@@ -383,9 +397,16 @@ export function UrlBar({ req, vars, outcome, onChange, onSend }: { req: Req; var
           spellCheck={false}
           className="min-w-0 flex-1 bg-transparent px-3 font-mono text-[13px] text-text outline-none placeholder:text-muted/70"
         />
-        <button type="submit" disabled={sending || !req.url.trim()} className="send-btn">
-          {sending ? <Spinner /> : "Send"}
-        </button>
+        {sending ? (
+          <button type="button" onClick={onCancel} className="send-btn stop gap-2" title="Cancel (Ctrl Enter)">
+            <Spinner />
+            Cancel
+          </button>
+        ) : (
+          <button type="submit" disabled={!req.url.trim()} className="send-btn">
+            Send
+          </button>
+        )}
       </form>
       {hasVars(req.url) && <Resolved url={req.url} vars={vars} />}
     </div>

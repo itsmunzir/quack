@@ -138,7 +138,7 @@ function Card() {
   return (
     <main className="card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[calc(var(--r-box)+2px)] bg-surface">
       <div className="p-3 pb-0">
-        <UrlBar req={ws.req} vars={ws.vars} outcome={ws.outcome} onChange={(p) => ws.updateReq(ws.req.id, p)} onSend={() => ws.send()} />
+        <UrlBar req={ws.req} vars={ws.vars} outcome={ws.outcome} onChange={(p) => ws.updateReq(ws.req.id, p)} onSend={() => ws.send()} onCancel={() => ws.cancel(ws.req.id)} />
       </div>
       <div ref={grid} className="split mt-3 grid min-h-0 flex-1 border-t border-line" style={{ "--frac": `${split}fr`, "--rest": `${1 - split}fr` } as CSSProperties}>
         <div className="flex min-h-0 min-w-0 flex-col p-4">

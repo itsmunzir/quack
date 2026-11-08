@@ -30,7 +30,7 @@ export default function App() {
       e.preventDefault();
       action();
     };
-    if (e.key === "Enter") run(() => ws.send());
+    if (e.key === "Enter") run(() => (ws.outcome?.sending ? ws.cancel(ws.req.id) : ws.send()));
     else if (e.shiftKey && key === "t") run(() => ws.setSpaceTheme(ws.space.id, nextTheme(theme)));
     else if (key === "k") run(() => setPalette((p) => !p));
     else if (key === "h") run(() => setShowHistory((h) => !h));

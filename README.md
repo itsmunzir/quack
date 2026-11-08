@@ -32,7 +32,7 @@ Builds aren't code-signed yet. On Windows, SmartScreen may warn: choose "More in
 
 | Keys | Action |
 | --- | --- |
-| `Ctrl+Enter` | Send |
+| `Ctrl+Enter` | Send, or cancel while sending |
 | `Ctrl+K` | Command bar |
 | `Ctrl+N` / `Ctrl+D` | New / duplicate request |
 | `Ctrl+1`…`9` | Switch space |
