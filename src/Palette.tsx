@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MAX_SPACES, reqTitle, useWorkspace } from "./store";
 import { MODES, THEMES, type Mode } from "./themes";
+import { backupAll, exportSpace, importFile } from "./files";
 import { Icon, ICONS, methodColor, methodShort, reqCurl, SpaceDot } from "./ui";
 
 interface Item {
@@ -64,6 +65,11 @@ export function Palette({ open, onClose, onMode, onToggleGlow }: { open: boolean
     for (const e of ws.space.envs)
       out.push({ id: `env-${e.id}`, group: "Environments", label: e.name || "Untitled", detail: e.id === ws.env?.id ? "active" : `${e.vars.filter(([k]) => k.trim()).length} variables`, icon: <Icon d={ICONS.braces} />, run: () => ws.selectEnv(e.id) });
     if (ws.env) out.push({ id: "env-none", group: "Environments", label: "No environment", icon: <Icon d={ICONS.braces} />, run: () => ws.selectEnv(null) });
+    out.push(
+      ...(ws.spaces.length < MAX_SPACES ? [{ id: "import", group: "Actions", label: "Import collection…", detail: "Postman, OpenAPI or Quack backup", icon: <Icon d={ICONS.download} />, run: () => void importFile(ws) }] : []),
+      { id: "export-space", group: "Actions", label: "Export space…", detail: ws.space.name, icon: <Icon d={ICONS.download} />, run: () => void exportSpace(ws, ws.space) },
+      { id: "backup", group: "Actions", label: "Back up all spaces…", icon: <Icon d={ICONS.download} />, run: () => void backupAll(ws) },
+    );
     out.push({ id: "env-new", group: "Actions", label: "New environment", icon: <Icon d={ICONS.plus} />, run: () => ws.addEnv() });
     for (const t of THEMES)
       out.push({ id: `theme-${t.id}`, group: "Appearance", label: `Theme: ${t.name}`, detail: `for ${ws.space.name}`, icon: <SpaceDot theme={t.id} className="size-3" />, run: () => ws.setSpaceTheme(ws.space.id, t.id) });

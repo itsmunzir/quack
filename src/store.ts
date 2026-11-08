@@ -50,9 +50,9 @@ export const MAX_SPACES = 9;
 export const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 export const BODYLESS = new Set(["GET", "HEAD"]);
 
-const uid = () => crypto.randomUUID();
+export const uid = () => crypto.randomUUID();
 
-function newReq(partial: Partial<Req> = {}): Req {
+export function newReq(partial: Partial<Req> = {}): Req {
   return { id: uid(), name: "", method: "GET", url: "", headers: [["Accept", "application/json"]], body: "", ...partial };
 }
 
@@ -120,31 +120,35 @@ function isReq(r: unknown): r is Req {
 }
 
 /** Reads the saved workspace, dropping anything malformed instead of crashing on it. */
+/** Checks spaces from storage or a backup file, dropping anything malformed. */
+export function cleanSpaces(list: unknown): Space[] {
+  return (Array.isArray(list) ? (list as Space[]) : [])
+    .filter((sp) => sp && isStr(sp.id) && isStr(sp.name) && Array.isArray(sp.requests))
+    .map((sp): Space => {
+      const requests = sp.requests.filter(isReq).map(
+        (r): Req => ({
+          ...r,
+          auth: isAuth(r.auth) ? r.auth : undefined,
+          bodyType: isBodyType(r.bodyType) ? r.bodyType : undefined,
+          form: Array.isArray(r.form) ? r.form.filter(isField) : undefined,
+        }),
+      );
+      const envs = Array.isArray(sp.envs) ? sp.envs.filter(isEnv) : [];
+      return {
+        id: sp.id,
+        name: sp.name,
+        theme: isThemeId(sp.theme) ? sp.theme : DEFAULT_THEME,
+        requests: requests.length ? requests : [newReq()],
+        envs,
+        envId: envs.some((e) => e.id === sp.envId) ? sp.envId : null,
+      };
+    });
+}
+
 function load(): Saved {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) ?? "null") as Saved | null;
-    const spaces = (Array.isArray(s?.spaces) ? s.spaces : [])
-      .filter((sp) => sp && isStr(sp.id) && isStr(sp.name) && Array.isArray(sp.requests))
-      .slice(0, MAX_SPACES)
-      .map((sp): Space => {
-        const requests = sp.requests.filter(isReq).map(
-          (r): Req => ({
-            ...r,
-            auth: isAuth(r.auth) ? r.auth : undefined,
-            bodyType: isBodyType(r.bodyType) ? r.bodyType : undefined,
-            form: Array.isArray(r.form) ? r.form.filter(isField) : undefined,
-          }),
-        );
-        const envs = Array.isArray(sp.envs) ? sp.envs.filter(isEnv) : [];
-        return {
-          id: sp.id,
-          name: sp.name,
-          theme: isThemeId(sp.theme) ? sp.theme : DEFAULT_THEME,
-          requests: requests.length ? requests : [newReq()],
-          envs,
-          envId: envs.some((e) => e.id === sp.envId) ? sp.envId : null,
-        };
-      });
+    const spaces = cleanSpaces(s?.spaces).slice(0, MAX_SPACES);
     if (s && spaces.length) return { spaces, spaceId: s.spaceId, reqId: s.reqId };
   } catch {
     // Corrupt or unavailable storage: start fresh.
@@ -159,6 +163,7 @@ export function useWorkspaceState() {
   const [saved, setSaved] = useState(load);
   const [outcomes, setOutcomes] = useState<Record<string, Outcome>>({});
   const [history, setHistory] = useState(loadHistory);
+  const [notice, setNotice] = useState<{ text: string; seq: number } | null>(null);
   // Actions are created once; this lets them read the latest workspace.
   const savedRef = useRef(saved);
   savedRef.current = saved;
@@ -247,6 +252,27 @@ export function useWorkspaceState() {
           const sp: Space = { id: uid(), name: `Space ${st.spaces.length + 1}`, theme, requests: [r], envs: [], envId: null };
           return { spaces: [...st.spaces, sp], spaceId: sp.id, reqId: r.id };
         });
+      },
+      /** Adds imported spaces as new ones, up to the space limit, and opens the first. Returns how many fit. */
+      importSpaces(incoming: Space[]): number {
+        const st = savedRef.current;
+        const room = Math.max(0, MAX_SPACES - st.spaces.length);
+        // Fresh ids, so importing the same file twice never collides.
+        const added = incoming.slice(0, room).map((sp) => {
+          const requests = sp.requests.map((r) => ({ ...r, id: uid() }));
+          const envs = sp.envs.map((e) => ({ ...e, id: uid() }));
+          const active = sp.envs.findIndex((e) => e.id === sp.envId);
+          return { ...sp, id: uid(), requests, envs, envId: active >= 0 ? envs[active].id : null };
+        });
+        if (added.length) setSaved((cur) => ({ spaces: [...cur.spaces, ...added], spaceId: added[0].id, reqId: added[0].requests[0].id }));
+        return added.length;
+      },
+      /** A short message shown at the bottom of the window for a few seconds. */
+      notify(text: string) {
+        setNotice((n) => ({ text, seq: (n?.seq ?? 0) + 1 }));
+      },
+      dismissNotice() {
+        setNotice(null);
       },
       renameSpace(id: string, name: string) {
         mapSpace(id, (s) => ({ ...s, name }));
@@ -341,7 +367,7 @@ export function useWorkspaceState() {
 
   const spaceHistory = useMemo(() => history.filter((h) => h.spaceId === space.id), [history, space.id]);
 
-  return { spaces, space, req, env, vars, history: spaceHistory, outcome: outcomes[req.id] as Outcome | undefined, send, cancel: cancelRequest, ...actions };
+  return { spaces, space, req, env, vars, history: spaceHistory, notice, outcome: outcomes[req.id] as Outcome | undefined, send, cancel: cancelRequest, ...actions };
 }
 
 export type Workspace = ReturnType<typeof useWorkspaceState>;

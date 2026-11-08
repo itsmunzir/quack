@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { MAX_SPACES, reqTitle, useWorkspace, type Req, type Space } from "./store";
 import {
   Chevron,
@@ -22,6 +22,7 @@ import {
 import appIcon from "./assets/icon.svg";
 import { EnvPicker } from "./Envs";
 import { HistoryList } from "./HistoryList";
+import { exportSpace, importFile } from "./files";
 
 /**
  * The window: a canvas that glows in the space's theme accent, a sidebar of
@@ -101,6 +102,8 @@ export function Spaces({
 
         <SpaceDots />
       </aside>
+
+      <Notice />
 
       <section className="relative flex min-h-0 min-w-0 flex-col pr-2 pb-2">
         <div data-tauri-drag-region className="flex h-11 shrink-0 items-center gap-2 pl-1">
@@ -329,7 +332,26 @@ function SpaceMenu({ onRename }: { onRename: () => void }) {
             <Icon d={ICONS.plus} className="size-3 text-muted" />
             <span className={`flex-1 text-[13px] ${full ? "text-muted" : ""}`}>{full ? `Up to ${MAX_SPACES} spaces` : "New space"}</span>
           </MenuItem>
+          {!full && (
+            <MenuItem
+              onClick={() => {
+                close();
+                void importFile(ws);
+              }}
+            >
+              <Icon d={ICONS.download} className="size-3 text-muted" />
+              <span className="flex-1 text-[13px]">Import collection…</span>
+            </MenuItem>
+          )}
           <div className="my-1 border-t border-line" />
+          <MenuItem
+            onClick={() => {
+              close();
+              void exportSpace(ws, ws.space);
+            }}
+          >
+            <span className="flex-1 text-[13px]">Export space…</span>
+          </MenuItem>
           <MenuItem
             onClick={() => {
               close();
@@ -351,6 +373,23 @@ function SpaceMenu({ onRename }: { onRename: () => void }) {
           )}
         </Menu>
       )}
+    </div>
+  );
+}
+
+/** A brief message at the bottom of the window, like "Imported 12 requests". */
+function Notice() {
+  const ws = useWorkspace();
+  const { notice, dismissNotice } = ws;
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(dismissNotice, 4000);
+    return () => clearTimeout(t);
+  }, [notice, dismissNotice]);
+  if (!notice) return null;
+  return (
+    <div key={notice.seq} role="status" className="pop pointer-events-none absolute bottom-5 left-1/2 z-40 max-w-[min(520px,80vw)] -translate-x-1/2 rounded-box border border-line bg-surface px-4 py-2.5 text-[13px] shadow-[0_16px_40px_-12px_rgb(0_0_0/0.3)]">
+      {notice.text}
     </div>
   );
 }

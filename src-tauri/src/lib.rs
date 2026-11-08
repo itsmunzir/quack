@@ -93,6 +93,35 @@ async fn send_request(
     })
 }
 
+/// Largest file `read_text_file` will load, so a wrong pick can't exhaust memory.
+const MAX_IMPORT_BYTES: u64 = 20 * 1024 * 1024;
+
+/// Reads a text file the user picked to import.
+#[tauri::command]
+async fn read_text_file(path: String) -> Result<String, String> {
+    let size = tokio::fs::metadata(&path)
+        .await
+        .map_err(|e| e.to_string())?
+        .len();
+    if size > MAX_IMPORT_BYTES {
+        return Err(format!(
+            "That file is larger than {} MB",
+            MAX_IMPORT_BYTES / 1024 / 1024
+        ));
+    }
+    tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Writes an export to the path the user chose in the save dialog.
+#[tauri::command]
+async fn write_text_file(path: String, contents: String) -> Result<(), String> {
+    tokio::fs::write(&path, contents)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 /// Stops a request started by `send_request`. Does nothing if it already finished.
 #[tauri::command]
 fn cancel_request(in_flight: State<'_, InFlight>, id: String) {
@@ -111,7 +140,12 @@ pub fn run() {
     builder
         .manage(engine)
         .manage(InFlight::default())
-        .invoke_handler(tauri::generate_handler![send_request, cancel_request])
+        .invoke_handler(tauri::generate_handler![
+            send_request,
+            cancel_request,
+            read_text_file,
+            write_text_file
+        ])
         .run(tauri::generate_context!())
         .expect("error while running Quack");
 }

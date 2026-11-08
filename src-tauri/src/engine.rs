@@ -121,9 +121,17 @@ impl Engine {
         let headers = res
             .headers()
             .iter()
-            .map(|(k, v)| (k.to_string(), String::from_utf8_lossy(v.as_bytes()).into_owned()))
+            .map(|(k, v)| {
+                (
+                    k.to_string(),
+                    String::from_utf8_lossy(v.as_bytes()).into_owned(),
+                )
+            })
             .collect();
-        if res.content_length().is_some_and(|n| n > MAX_BODY_BYTES as u64) {
+        if res
+            .content_length()
+            .is_some_and(|n| n > MAX_BODY_BYTES as u64)
+        {
             return Err(EngineError::TooLarge);
         }
         let mut body = Vec::new();
@@ -155,12 +163,19 @@ pub fn normalize_url(input: &str) -> String {
     }
     let host = url.split(['/', '?', '#']).next().unwrap_or("");
     let host = host.rsplit_once(':').map_or(host, |(h, port)| {
-        if port.chars().all(|c| c.is_ascii_digit()) { h } else { host }
+        if port.chars().all(|c| c.is_ascii_digit()) {
+            h
+        } else {
+            host
+        }
     });
     let local = host == "localhost"
         || host.ends_with(".localhost")
         || host.ends_with(".local")
-        || host.trim_matches(['[', ']']).parse::<std::net::IpAddr>().is_ok();
+        || host
+            .trim_matches(['[', ']'])
+            .parse::<std::net::IpAddr>()
+            .is_ok();
     format!("{}://{url}", if local { "http" } else { "https" })
 }
 
@@ -242,13 +257,22 @@ mod tests {
 
     #[test]
     fn remote_hosts_default_to_https() {
-        assert_eq!(normalize_url("api.github.com/users"), "https://api.github.com/users");
-        assert_eq!(normalize_url("example.com:8443"), "https://example.com:8443");
+        assert_eq!(
+            normalize_url("api.github.com/users"),
+            "https://api.github.com/users"
+        );
+        assert_eq!(
+            normalize_url("example.com:8443"),
+            "https://example.com:8443"
+        );
     }
 
     #[test]
     fn local_hosts_default_to_http() {
-        assert_eq!(normalize_url("localhost:3000/api"), "http://localhost:3000/api");
+        assert_eq!(
+            normalize_url("localhost:3000/api"),
+            "http://localhost:3000/api"
+        );
         assert_eq!(normalize_url("127.0.0.1"), "http://127.0.0.1");
         assert_eq!(normalize_url("[::1]:8080"), "http://[::1]:8080");
         assert_eq!(normalize_url("printer.local"), "http://printer.local");
@@ -257,14 +281,25 @@ mod tests {
     #[test]
     fn rejects_bad_header_names() {
         assert!(build_headers(&[("bad header".into(), "x".into())]).is_err());
-        assert!(build_headers(&[("".into(), "ignored".into())]).unwrap().is_empty());
+        assert!(
+            build_headers(&[("".into(), "ignored".into())])
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[tokio::test]
     async fn missing_upload_file_is_a_clear_error() {
-        let parts = vec![FormPart { name: "f".into(), value: "no/such/file.bin".into(), file: true }];
+        let parts = vec![FormPart {
+            name: "f".into(),
+            value: "no/such/file.bin".into(),
+            file: true,
+        }];
         let err = build_form(parts).await.unwrap_err();
-        assert!(err.to_string().starts_with("Could not read no/such/file.bin"));
+        assert!(
+            err.to_string()
+                .starts_with("Could not read no/such/file.bin")
+        );
     }
 }
 
@@ -316,8 +351,16 @@ mod live {
                 headers: vec![("Content-Type".into(), "text/plain".into())],
                 body: None,
                 multipart: Some(vec![
-                    FormPart { name: "duck".into(), value: "quack".into(), file: false },
-                    FormPart { name: "manifest".into(), value: "Cargo.toml".into(), file: true },
+                    FormPart {
+                        name: "duck".into(),
+                        value: "quack".into(),
+                        file: false,
+                    },
+                    FormPart {
+                        name: "manifest".into(),
+                        value: "Cargo.toml".into(),
+                        file: true,
+                    },
                 ]),
                 timeout: Some(Duration::from_secs(20)),
             })
