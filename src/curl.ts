@@ -1,8 +1,10 @@
 import type { Header } from "./api";
+import type { FormPart } from "./api";
 import type { Auth } from "./auth";
+import type { FormField } from "./body";
 import type { Req } from "./store";
 
-type Parsed = Pick<Req, "method" | "url" | "headers" | "body" | "auth">;
+type Parsed = Pick<Req, "method" | "url" | "headers" | "body" | "auth" | "bodyType" | "form">;
 
 /** Splits a shell command into words, honouring quotes and line continuations (bash `\` and cmd `^`). */
 function words(cmd: string): string[] {
@@ -49,7 +51,7 @@ function words(cmd: string): string[] {
 
 const DATA_FLAGS = new Set(["-d", "--data", "--data-raw", "--data-binary", "--data-ascii", "--data-urlencode"]);
 /** Flags that take a value we don't use. */
-const SKIP_WITH_VALUE = new Set(["-o", "--output", "-m", "--max-time", "--connect-timeout", "-x", "--proxy", "-w", "--write-out", "-c", "--cookie-jar", "--retry", "-F", "--form"]);
+const SKIP_WITH_VALUE = new Set(["-o", "--output", "-m", "--max-time", "--connect-timeout", "-x", "--proxy", "-w", "--write-out", "-c", "--cookie-jar", "--retry"]);
 
 export const isCurl = (text: string) => /^\s*curl(\.exe)?\s/i.test(text);
 
@@ -63,6 +65,7 @@ export function parseCurl(cmd: string): Parsed | null {
   const data: string[] = [];
   let asQuery = false;
   let auth: Auth | undefined;
+  const form: FormField[] = [];
 
   for (let i = 1; i < w.length; i++) {
     let flag = w[i];
@@ -83,6 +86,15 @@ export function parseCurl(cmd: string): Parsed | null {
       if (bearer) auth = { type: "bearer", token: bearer[1] };
       else headers.push([name, value]);
     } else if (DATA_FLAGS.has(flag)) data.push(next());
+    else if (flag === "-F" || flag === "--form") {
+      // name=value, or name=@path for a file; drop ;type=… and similar suffixes.
+      const f = next();
+      const eq = f.indexOf("=");
+      if (eq <= 0) continue;
+      const [name, value] = [f.slice(0, eq), f.slice(eq + 1)];
+      const file = value.startsWith("@");
+      form.push({ name, value: (file ? value.slice(1) : value).split(";")[0], file: file || undefined });
+    }
     else if (flag === "--json") {
       data.push(next());
       headers.push(["Content-Type", "application/json"], ["Accept", "application/json"]);
@@ -106,6 +118,7 @@ export function parseCurl(cmd: string): Parsed | null {
     url += (url.includes("?") ? "&" : "?") + body;
     body = "";
   }
+  if (form.length) return { method: method || "POST", url, headers: headers.filter(([k]) => k.toLowerCase() !== "content-type"), body: "", auth, bodyType: "multipart", form };
   if (!method) method = body ? "POST" : "GET";
   // Pretty-print JSON bodies so they are pleasant to edit.
   try {
@@ -119,10 +132,13 @@ export function parseCurl(cmd: string): Parsed | null {
 const sh = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
 /** The request as a copy-pasteable bash `curl` command. */
-export function toCurl(r: Parsed, sendBody: boolean): string {
+export function toCurl(r: Parsed & { multipart?: FormPart[] }, sendBody: boolean): string {
+  const multipart = sendBody ? r.multipart : undefined;
+  const implicitPost = r.method === "POST" && sendBody && (r.body || multipart?.length);
   const parts = [`curl ${sh(r.url)}`];
-  if (r.method !== "GET" && !(r.method === "POST" && sendBody && r.body)) parts.push(`-X ${r.method}`);
-  for (const [k, v] of r.headers) if (k.trim()) parts.push(`-H ${sh(`${k}: ${v}`)}`);
-  if (sendBody && r.body) parts.push(`--data-raw ${sh(r.body)}`);
+  if (r.method !== "GET" && !implicitPost) parts.push(`-X ${r.method}`);
+  for (const [k, v] of r.headers) if (k.trim() && !(multipart && k.trim().toLowerCase() === "content-type")) parts.push(`-H ${sh(`${k}: ${v}`)}`);
+  if (multipart) for (const p of multipart) parts.push(`-F ${sh(`${p.name}=${p.file ? "@" : ""}${p.value}`)}`);
+  else if (sendBody && r.body) parts.push(`--data-raw ${sh(r.body)}`);
   return parts.join(" \\\n  ");
 }

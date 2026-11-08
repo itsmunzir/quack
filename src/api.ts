@@ -7,7 +7,15 @@ export interface SendArgs {
   url: string;
   headers: Header[];
   body?: string;
+  /** Replaces `body` with a multipart form; file parts carry a path the engine reads. */
+  multipart?: FormPart[];
   timeoutMs?: number;
+}
+
+export interface FormPart {
+  name: string;
+  value: string;
+  file: boolean;
 }
 
 /** Mirrors `SendResult` in src-tauri/src/lib.rs. */

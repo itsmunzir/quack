@@ -7,6 +7,7 @@ import { Duck } from "./Duck";
 import { isCurl, parseCurl, toCurl } from "./curl";
 import { hasVars, prepare, resolve } from "./env";
 import { AUTH_TYPES, blankAuth, type Auth } from "./auth";
+import { BODY_TYPES, type FormField } from "./body";
 
 /* ─── Small helpers ─────────────────────────────────────────────────────── */
 
@@ -75,6 +76,7 @@ export const ICONS = {
   check: "M3.5 8.5l3 3 6-7",
   terminal: "M2.5 4l3.5 4-3.5 4M8 12.5h5.5",
   clock: "M8 14.5A6.5 6.5 0 1 0 8 1.5a6.5 6.5 0 0 0 0 13zM8 4.5V8l2.5 1.5",
+  clip: "M10.5 5L6 9.5a1.4 1.4 0 0 0 2 2l5-5a2.8 2.8 0 0 0-4-4L4 7.5a4.2 4.2 0 0 0 6 6l3.5-3.5",
   braces: "M5.5 2.5c-1.4 0-2 .6-2 2V6c0 1.1-.6 2-1.5 2 .9 0 1.5.9 1.5 2v1.5c0 1.4.6 2 2 2M10.5 2.5c1.4 0 2 .6 2 2V6c0 1.1.6 2 1.5 2-.9 0-1.5.9-1.5 2v1.5c0 1.4-.6 2-2 2",
   palette: "M8 14.5A6.5 6.5 0 1 1 14.5 8c0 1.5-1.2 2.3-2.5 2.3h-1.3a1.2 1.2 0 0 0-.8 2.1c.5.6.1 2.1-1.9 2.1zM4.8 7.5h0M6.8 4.8h0M10 4.8h0",
 };
@@ -391,7 +393,7 @@ export function UrlBar({
             const parsed = isCurl(text) && parseCurl(text);
             if (!parsed) return;
             e.preventDefault();
-            onChange(parsed);
+            onChange({ bodyType: undefined, form: undefined, auth: undefined, ...parsed });
           }}
           placeholder="Paste a URL or a cURL command"
           spellCheck={false}
@@ -559,13 +561,111 @@ export function RequestEditor({ req, vars, onChange }: { req: Req; vars: Header[
         ) : BODYLESS.has(req.method) ? (
           <Empty title={`${req.method} requests have no body`} note="Switch the method to POST, PUT or PATCH to send one." />
         ) : (
-          <textarea
-            value={req.body}
-            onChange={(e) => onChange({ body: e.target.value })}
-            placeholder={'{\n  "hello": "world"\n}'}
-            spellCheck={false}
-            className="field h-full min-h-40 w-full resize-none p-3 font-mono text-[13px] leading-relaxed"
-          />
+          <BodyEditor req={req} onChange={onChange} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Raw text, a URL-encoded form, or a multipart form with files. */
+function BodyEditor({ req, onChange }: { req: Req; onChange: (p: Partial<Req>) => void }) {
+  const type = req.bodyType ?? "raw";
+  return (
+    <div className="flex h-full flex-col gap-3">
+      <div className="max-w-xs shrink-0">
+        <Segmented label="Body type" options={BODY_TYPES} value={type} onChange={(t) => onChange({ bodyType: t === "raw" ? undefined : t, form: req.form ?? [] })} />
+      </div>
+      {type === "raw" ? (
+        <textarea
+          value={req.body}
+          onChange={(e) => onChange({ body: e.target.value })}
+          placeholder={'{\n  "hello": "world"\n}'}
+          spellCheck={false}
+          className="field min-h-40 w-full flex-1 resize-none p-3 font-mono text-[13px] leading-relaxed"
+        />
+      ) : (
+        <div>
+          <FieldsEditor fields={req.form ?? []} files={type === "multipart"} onChange={(form) => onChange({ form })} />
+          <p className="px-2 pt-3 text-[12px] text-muted">
+            {type === "form" ? "Sent as application/x-www-form-urlencoded." : "Sent as multipart/form-data. Files are read from disk each time you send."}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Asks for one file and returns its path. Only the desktop app can pick files. */
+async function pickFile(): Promise<string | null> {
+  if (!isTauri) return null;
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const path = await open({ multiple: false, directory: false });
+  return typeof path === "string" ? path : null;
+}
+
+const fileName = (path: string) => path.split(/[\\/]/).pop() || path;
+
+/** Name and value rows; with `files`, a row can hold a file instead of text. */
+function FieldsEditor({ fields, files, onChange }: { fields: FormField[]; files: boolean; onChange: (f: FormField[]) => void }) {
+  const set = (i: number, f: FormField) => onChange(fields.map((x, j) => (j === i ? f : x)));
+  const chooseFile = async (i: number | null) => {
+    const path = await pickFile();
+    if (!path) return;
+    if (i === null) onChange([...fields, { name: fileName(path).replace(/\.[^.]*$/, ""), value: path, file: true }]);
+    else set(i, { ...fields[i], value: path, file: true });
+  };
+  const field =
+    "h-8 rounded-[6px] bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/60 hover:bg-raised/70 focus:bg-raised";
+  return (
+    <div className="flex flex-col">
+      {fields.map((f, i) => {
+        const isFile = files && f.file;
+        return (
+          <div key={i} className="group flex items-center gap-2 border-b border-line py-0.5">
+            <input value={f.name} onChange={(e) => set(i, { ...f, name: e.target.value })} placeholder="Name" spellCheck={false} className={`${field} w-2/5 text-text`} />
+            {isFile ? (
+              <button
+                type="button"
+                onClick={() => chooseFile(i)}
+                title={f.value}
+                className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-[6px] px-2 text-left font-mono text-[12.5px] text-text transition-colors hover:bg-raised/70"
+              >
+                <Icon d={ICONS.clip} className="size-3.5 shrink-0 text-muted" />
+                <span className="truncate">{f.value ? fileName(f.value) : "Choose a file…"}</span>
+              </button>
+            ) : (
+              <input value={f.value} onChange={(e) => set(i, { ...f, value: e.target.value, file: undefined })} placeholder="Value" spellCheck={false} className={`${field} min-w-0 flex-1 text-muted focus:text-text`} />
+            )}
+            {files && (
+              <button
+                type="button"
+                onClick={() => (isFile ? set(i, { ...f, value: "", file: undefined }) : chooseFile(i))}
+                className="btn btn-ghost voice h-7 px-2 text-[11px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                title={isFile ? "Use text instead" : "Attach a file"}
+              >
+                {isFile ? "Text" : "File"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => onChange(fields.filter((_, j) => j !== i))}
+              className="btn btn-ghost btn-icon size-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+              aria-label={`Remove ${f.name || "field"}`}
+            >
+              <Icon d={ICONS.x} />
+            </button>
+          </div>
+        );
+      })}
+      <div className="mt-1.5 flex gap-1">
+        <button type="button" onClick={() => onChange([...fields, { name: "", value: "" }])} className="rounded-[6px] px-2 py-1 text-[12.5px] text-muted transition-colors hover:bg-raised hover:text-text">
+          + Add field
+        </button>
+        {files && isTauri && (
+          <button type="button" onClick={() => chooseFile(null)} className="rounded-[6px] px-2 py-1 text-[12.5px] text-muted transition-colors hover:bg-raised hover:text-text">
+            + Add file
+          </button>
         )}
       </div>
     </div>

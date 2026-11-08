@@ -3,9 +3,11 @@
 //! One `Engine` lives for the whole app session so cookies and pooled
 //! connections carry over between requests, the way a browser tab would.
 
+use std::path::Path;
 use std::time::{Duration, Instant};
 
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
+use reqwest::multipart::{Form, Part};
 use reqwest::{Client, Method, Version, redirect};
 
 pub type Header = (String, String);
@@ -14,12 +16,25 @@ pub type Header = (String, String);
 /// instead of exhausting RAM.
 pub const MAX_BODY_BYTES: usize = 50 * 1024 * 1024;
 
-/// What the user asked to send.
+/// Largest file a multipart body will read from disk.
+pub const MAX_UPLOAD_BYTES: u64 = 100 * 1024 * 1024;
+
+/// One field of a multipart body: text, or the path of a file to upload.
+#[derive(Debug, serde::Deserialize)]
+pub struct FormPart {
+    pub name: String,
+    pub value: String,
+    #[serde(default)]
+    pub file: bool,
+}
+
+/// What the user asked to send. `multipart`, when present, replaces `body`.
 pub struct Outgoing {
     pub method: String,
     pub url: String,
     pub headers: Vec<Header>,
     pub body: Option<Vec<u8>>,
+    pub multipart: Option<Vec<FormPart>>,
     pub timeout: Option<Duration>,
 }
 
@@ -46,6 +61,8 @@ pub enum EngineError {
     Connect(String),
     #[error("Response is larger than {} MB", MAX_BODY_BYTES / 1024 / 1024)]
     TooLarge,
+    #[error("Could not read {0}: {1}")]
+    File(String, String),
     #[error("{0}")]
     Other(String),
 }
@@ -81,16 +98,19 @@ impl Engine {
         let method = Method::from_bytes(req.method.trim().to_uppercase().as_bytes())
             .map_err(|_| EngineError::Method(req.method.clone()))?;
 
-        let mut builder = self
-            .client
-            .request(method, normalize_url(&req.url))
-            .headers(build_headers(&req.headers)?);
+        let mut headers = build_headers(&req.headers)?;
+        let mut builder = self.client.request(method, normalize_url(&req.url));
         if let Some(t) = req.timeout {
             builder = builder.timeout(t);
         }
-        if let Some(body) = req.body {
+        if let Some(parts) = req.multipart {
+            // reqwest sets the multipart Content-Type with its boundary.
+            headers.remove(CONTENT_TYPE);
+            builder = builder.multipart(build_form(parts).await?);
+        } else if let Some(body) = req.body {
             builder = builder.body(body);
         }
+        builder = builder.headers(headers);
 
         let started = Instant::now();
         let mut res = builder.send().await?;
@@ -160,6 +180,35 @@ fn build_headers(headers: &[Header]) -> Result<HeaderMap, EngineError> {
     Ok(map)
 }
 
+/// Builds a multipart body, reading file parts from disk. Unnamed fields are skipped.
+async fn build_form(parts: Vec<FormPart>) -> Result<Form, EngineError> {
+    let mut form = Form::new();
+    for p in parts {
+        if p.name.trim().is_empty() {
+            continue;
+        }
+        if !p.file {
+            form = form.text(p.name, p.value);
+            continue;
+        }
+        let read_err = |e: std::io::Error| EngineError::File(p.value.clone(), e.to_string());
+        let size = tokio::fs::metadata(&p.value).await.map_err(read_err)?.len();
+        if size > MAX_UPLOAD_BYTES {
+            return Err(EngineError::File(
+                p.value,
+                format!("larger than {} MB", MAX_UPLOAD_BYTES / 1024 / 1024),
+            ));
+        }
+        let bytes = tokio::fs::read(&p.value).await.map_err(read_err)?;
+        let file_name = Path::new(&p.value)
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        form = form.part(p.name, Part::bytes(bytes).file_name(file_name));
+    }
+    Ok(form)
+}
+
 fn version_label(v: Version) -> &'static str {
     match v {
         Version::HTTP_09 => "HTTP/0.9",
@@ -210,6 +259,13 @@ mod tests {
         assert!(build_headers(&[("bad header".into(), "x".into())]).is_err());
         assert!(build_headers(&[("".into(), "ignored".into())]).unwrap().is_empty());
     }
+
+    #[tokio::test]
+    async fn missing_upload_file_is_a_clear_error() {
+        let parts = vec![FormPart { name: "f".into(), value: "no/such/file.bin".into(), file: true }];
+        let err = build_form(parts).await.unwrap_err();
+        assert!(err.to_string().starts_with("Could not read no/such/file.bin"));
+    }
 }
 
 #[cfg(test)]
@@ -227,6 +283,7 @@ mod live {
                 url: "httpbin.org/post?x=1".into(),
                 headers: vec![("Content-Type".into(), "application/json".into())],
                 body: Some(br#"{"hello":"quack"}"#.to_vec()),
+                multipart: None,
                 timeout: Some(Duration::from_secs(20)),
             })
             .await
@@ -242,6 +299,7 @@ mod live {
                 url: "https://httpbin.org/redirect-to?url=/gzip".into(),
                 headers: vec![],
                 body: None,
+                multipart: None,
                 timeout: Some(Duration::from_secs(20)),
             })
             .await
@@ -249,5 +307,25 @@ mod live {
         assert_eq!(res.status, 200);
         assert!(res.url.ends_with("/gzip"));
         assert!(String::from_utf8_lossy(&res.body).contains("\"gzipped\": true"));
+
+        // Multipart: a text field and this crate's manifest as a file.
+        let res = engine
+            .send(Outgoing {
+                method: "POST".into(),
+                url: "https://httpbin.org/post".into(),
+                headers: vec![("Content-Type".into(), "text/plain".into())],
+                body: None,
+                multipart: Some(vec![
+                    FormPart { name: "duck".into(), value: "quack".into(), file: false },
+                    FormPart { name: "manifest".into(), value: "Cargo.toml".into(), file: true },
+                ]),
+                timeout: Some(Duration::from_secs(20)),
+            })
+            .await
+            .unwrap();
+        let body = String::from_utf8_lossy(&res.body);
+        assert!(body.contains("\"duck\": \"quack\""));
+        assert!(body.contains("\"manifest\""));
+        assert!(body.contains("multipart/form-data; boundary="));
     }
 }

@@ -1,5 +1,6 @@
 import type { Header } from "./api";
 import { withAuth, type Auth } from "./auth";
+import { withBody, type FormField } from "./body";
 
 /** `{{name}}`, with optional spaces inside the braces. */
 const VAR = /\{\{\s*([\w.-]+)\s*\}\}/g;
@@ -18,14 +19,14 @@ export function resolve(text: string, vars: Header[]): { text: string; missing: 
   return { text: out, missing: [...missing] };
 }
 
-type Fillable = { url: string; headers: Header[]; body: string; auth?: Auth };
+type Fillable = { url: string; headers: Header[]; body: string; auth?: Auth; form?: FormField[] };
 
 /** A request with every variable filled in. */
 export function withEnv<R extends Fillable>(r: R, vars: Header[]): R {
   const fill = (s: string) => resolve(s, vars).text;
   const auth = r.auth && (Object.fromEntries(Object.entries(r.auth).map(([k, v]) => [k, k === "type" || k === "in" ? v : fill(v)])) as Auth);
-  return { ...r, url: fill(r.url), headers: r.headers.map(([k, v]) => [fill(k), fill(v)] as Header), body: fill(r.body), auth };
+  return { ...r, url: fill(r.url), headers: r.headers.map(([k, v]) => [fill(k), fill(v)] as Header), body: fill(r.body), auth, form: r.form?.map((f) => ({ ...f, name: fill(f.name), value: fill(f.value) })) };
 }
 
-/** Exactly what goes on the wire: variables filled in first, then auth folded into headers or the URL. */
-export const prepare = <R extends Fillable>(r: R, vars: Header[]): R => withAuth(withEnv(r, vars));
+/** Exactly what goes on the wire: variables filled in, auth folded into headers or the URL, form fields encoded. */
+export const prepare = <R extends Fillable>(r: R, vars: Header[]) => withBody(withAuth(withEnv(r, vars)));

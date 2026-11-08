@@ -3,6 +3,7 @@ import { cancelRequest, CANCELLED, sendRequest, type Header, type SendResult } f
 import { DEFAULT_THEME, isThemeId, type ThemeId } from "./themes";
 import { prepare } from "./env";
 import { isAuth, type Auth } from "./auth";
+import { isBodyType, isField, type BodyType, type FormField } from "./body";
 import { loadHistory, MAX_HISTORY, saveHistory, type HistoryEntry } from "./history";
 
 export interface Req {
@@ -12,6 +13,8 @@ export interface Req {
   url: string;
   headers: Header[];
   body: string;
+  bodyType?: BodyType;
+  form?: FormField[];
   auth?: Auth;
   pinned?: boolean;
 }
@@ -124,7 +127,14 @@ function load(): Saved {
       .filter((sp) => sp && isStr(sp.id) && isStr(sp.name) && Array.isArray(sp.requests))
       .slice(0, MAX_SPACES)
       .map((sp): Space => {
-        const requests = sp.requests.filter(isReq).map((r) => ({ ...r, auth: isAuth(r.auth) ? r.auth : undefined }));
+        const requests = sp.requests.filter(isReq).map(
+          (r): Req => ({
+            ...r,
+            auth: isAuth(r.auth) ? r.auth : undefined,
+            bodyType: isBodyType(r.bodyType) ? r.bodyType : undefined,
+            form: Array.isArray(r.form) ? r.form.filter(isField) : undefined,
+          }),
+        );
         const envs = Array.isArray(sp.envs) ? sp.envs.filter(isEnv) : [];
         return {
           id: sp.id,
@@ -311,6 +321,7 @@ export function useWorkspaceState() {
         url: filled.url,
         headers: filled.headers.filter(([k]) => k.trim()),
         body: BODYLESS.has(filled.method) ? undefined : filled.body,
+        multipart: BODYLESS.has(filled.method) ? undefined : filled.multipart,
         timeoutMs: 30_000,
       });
       setOutcomes((o) => ({ ...o, [r.id]: { sending: false, result, seq } }));

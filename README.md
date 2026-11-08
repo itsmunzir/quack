@@ -21,6 +21,7 @@ Builds aren't code-signed yet. On Windows, SmartScreen may warn: choose "More in
 - A command bar (`Ctrl+K`) to jump to any request or space and run actions
 - Edit query params as rows, kept in sync with the URL
 - History per space: every send with its response, one click to see it again (`Ctrl+H`)
+- Bodies: raw, URL-encoded form, or multipart with file uploads
 - Auth: Bearer, Basic or API key (header or query), with variables for secrets
 - Environments per space: `{{variables}}` in URLs, headers and bodies, switched with `Ctrl+E`
 - Paste a cURL command into the URL bar to import it; copy any request back out as cURL

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use engine::{Engine, Header, Outgoing};
+use engine::{Engine, FormPart, Header, Outgoing};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use tokio::sync::oneshot;
@@ -36,6 +36,8 @@ pub struct SendArgs {
     headers: Vec<Header>,
     #[serde(default)]
     body: Option<String>,
+    #[serde(default)]
+    multipart: Option<Vec<FormPart>>,
     #[serde(default)]
     timeout_ms: Option<u64>,
 }
@@ -69,6 +71,7 @@ async fn send_request(
         url: args.url,
         headers: args.headers,
         body: args.body.filter(|b| !b.is_empty()).map(String::into_bytes),
+        multipart: args.multipart,
         timeout: args.timeout_ms.map(Duration::from_millis),
     };
     let reply = tokio::select! {
@@ -101,7 +104,11 @@ fn cancel_request(in_flight: State<'_, InFlight>, id: String) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let engine = Engine::new().expect("failed to start the HTTP engine");
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Left out of unit tests: on Windows it needs the app manifest, which test binaries lack.
+    #[cfg(not(test))]
+    let builder = builder.plugin(tauri_plugin_dialog::init());
+    builder
         .manage(engine)
         .manage(InFlight::default())
         .invoke_handler(tauri::generate_handler![send_request, cancel_request])
