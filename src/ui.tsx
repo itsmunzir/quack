@@ -74,6 +74,7 @@ export const ICONS = {
   copy: "M5.5 5.5V3a1 1 0 0 1 1-1H13a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1h-2.5M3 5.5h6.5a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1z",
   check: "M3.5 8.5l3 3 6-7",
   terminal: "M2.5 4l3.5 4-3.5 4M8 12.5h5.5",
+  clock: "M8 14.5A6.5 6.5 0 1 0 8 1.5a6.5 6.5 0 0 0 0 13zM8 4.5V8l2.5 1.5",
   braces: "M5.5 2.5c-1.4 0-2 .6-2 2V6c0 1.1-.6 2-1.5 2 .9 0 1.5.9 1.5 2v1.5c0 1.4.6 2 2 2M10.5 2.5c1.4 0 2 .6 2 2V6c0 1.1.6 2 1.5 2-.9 0-1.5.9-1.5 2v1.5c0 1.4-.6 2-2 2",
   palette: "M8 14.5A6.5 6.5 0 1 1 14.5 8c0 1.5-1.2 2.3-2.5 2.3h-1.3a1.2 1.2 0 0 0-.8 2.1c.5.6.1 2.1-1.9 2.1zM4.8 7.5h0M6.8 4.8h0M10 4.8h0",
 };
@@ -96,6 +97,15 @@ export function CopyButton({ label, text, icon = ICONS.copy }: { label: string; 
 
 /** The request as a cURL command with variables filled in; the body is left out for methods that can't carry one. */
 export const reqCurl = (r: Req, vars: Header[]) => toCurl(prepare(r, vars), !BODYLESS.has(r.method));
+
+/** A request's method as a small tinted tag. */
+export function MethodBadge({ method }: { method: string }) {
+  return (
+    <span className="w-8 shrink-0 rounded-[5px] bg-text/6 py-0.5 text-center font-mono text-[9.5px] font-bold" style={{ color: methodColor(method) }}>
+      {methodShort(method)}
+    </span>
+  );
+}
 
 /* ─── Menus ─────────────────────────────────────────────────────────────── */
 

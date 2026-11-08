@@ -10,6 +10,7 @@ export default function App() {
   const [mode, setMode] = useState(loadMode);
   const [glow, setGlow] = useState(loadGlow);
   const [palette, setPalette] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const { theme } = ws.space;
 
   // Layout effect so a space's theme is painted before the first frame, with no flash.
@@ -32,6 +33,7 @@ export default function App() {
     if (e.key === "Enter") run(() => ws.send());
     else if (e.shiftKey && key === "t") run(() => ws.setSpaceTheme(ws.space.id, nextTheme(theme)));
     else if (key === "k") run(() => setPalette((p) => !p));
+    else if (key === "h") run(() => setShowHistory((h) => !h));
     else if (key === "e") run(() => {
       // Cycles through the space's environments, then none.
       const ids = [...ws.space.envs.map((x) => x.id), null];
@@ -63,6 +65,8 @@ export default function App() {
           />
         }
         openPalette={() => setPalette(true)}
+        showHistory={showHistory}
+        onToggleHistory={() => setShowHistory((h) => !h)}
       />
       <Palette open={palette} onClose={() => setPalette(false)} onMode={setMode} onToggleGlow={() => setGlow((g) => !g)} />
     </WorkspaceContext.Provider>

@@ -9,6 +9,7 @@ import {
   Menu,
   MenuItem,
   methodColor,
+  MethodBadge,
   methodShort,
   RequestEditor,
   ResponseView,
@@ -20,12 +21,23 @@ import {
 } from "./ui";
 import appIcon from "./assets/icon.svg";
 import { EnvPicker } from "./Envs";
+import { HistoryList } from "./HistoryList";
 
 /**
  * The window: a canvas that glows in the space's theme accent, a sidebar of
  * requests, and one card with request and response side by side.
  */
-export function Spaces({ appearance, openPalette }: { appearance: ReactNode; openPalette: () => void }) {
+export function Spaces({
+  appearance,
+  openPalette,
+  showHistory,
+  onToggleHistory,
+}: {
+  appearance: ReactNode;
+  openPalette: () => void;
+  showHistory: boolean;
+  onToggleHistory: () => void;
+}) {
   const ws = useWorkspace();
   const [renaming, setRenaming] = useState(false);
 
@@ -60,16 +72,32 @@ export function Spaces({ appearance, openPalette }: { appearance: ReactNode; ope
           ) : (
             <SpaceMenu onRename={() => setRenaming(true)} />
           )}
-          <button type="button" onClick={ws.addReq} className="btn btn-ghost btn-icon size-6" title="New request (Ctrl N)" aria-label="New request">
-            <Icon d={ICONS.plus} />
-          </button>
+          <div className="flex shrink-0 items-center gap-0.5">
+            <button
+              type="button"
+              onClick={onToggleHistory}
+              aria-pressed={showHistory}
+              className={`btn btn-ghost btn-icon size-6 ${showHistory ? "!bg-raised !text-text" : ""}`}
+              title="History (Ctrl H)"
+              aria-label="History"
+            >
+              <Icon d={ICONS.clock} />
+            </button>
+            <button type="button" onClick={ws.addReq} className="btn btn-ghost btn-icon size-6" title="New request (Ctrl N)" aria-label="New request">
+              <Icon d={ICONS.plus} />
+            </button>
+          </div>
         </div>
 
-        <nav className="-mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-auto px-1">
-          {ws.space.requests.map((r) => (
-            <ReqRow key={r.id} r={r} space={ws.space} />
-          ))}
-        </nav>
+        {showHistory ? (
+          <HistoryList />
+        ) : (
+          <nav className="-mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-auto px-1">
+            {ws.space.requests.map((r) => (
+              <ReqRow key={r.id} r={r} space={ws.space} />
+            ))}
+          </nav>
+        )}
 
         <SpaceDots />
       </aside>
@@ -183,14 +211,6 @@ function ReqRow({ r, space }: { r: Req; space: Space }) {
       <RowButton label={r.pinned ? "Unpin" : "Pin"} icon={ICONS.pin} filled={r.pinned} className={r.pinned ? "text-muted" : hover} onClick={() => ws.updateReq(r.id, { pinned: !r.pinned })} />
       <RowButton label="Delete" icon={ICONS.x} className={hover} onClick={() => ws.deleteReq(r.id)} />
     </div>
-  );
-}
-
-function MethodBadge({ method }: { method: string }) {
-  return (
-    <span className="w-8 shrink-0 rounded-[5px] bg-text/6 py-0.5 text-center font-mono text-[9.5px] font-bold" style={{ color: methodColor(method) }}>
-      {methodShort(method)}
-    </span>
   );
 }
 

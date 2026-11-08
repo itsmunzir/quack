@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { sendRequest, type Header, type SendResult } from "./api";
 import { DEFAULT_THEME, isThemeId, type ThemeId } from "./themes";
 import { prepare } from "./env";
 import { isAuth, type Auth } from "./auth";
+import { loadHistory, MAX_HISTORY, saveHistory, type HistoryEntry } from "./history";
 
 export interface Req {
   id: string;
@@ -147,6 +148,15 @@ function load(): Saved {
 export function useWorkspaceState() {
   const [saved, setSaved] = useState(load);
   const [outcomes, setOutcomes] = useState<Record<string, Outcome>>({});
+  const [history, setHistory] = useState(loadHistory);
+  // Actions are created once; this lets them read the latest workspace.
+  const savedRef = useRef(saved);
+  savedRef.current = saved;
+
+  useEffect(() => {
+    const t = setTimeout(() => saveHistory(history), 400);
+    return () => clearTimeout(t);
+  }, [history]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -261,7 +271,25 @@ export function useWorkspaceState() {
           }),
         }));
       },
+      /** Shows a past response on its request, restoring the request if it was deleted since. */
+      openHistory(h: HistoryEntry) {
+        const st = savedRef.current;
+        const sp = st.spaces.find((s) => s.id === h.spaceId) ?? st.spaces.find((s) => s.id === st.spaceId) ?? st.spaces[0];
+        const exists = sp.requests.some((r) => r.id === h.req.id);
+        const id = exists ? h.req.id : uid();
+        setSaved((cur) => ({
+          ...cur,
+          spaceId: sp.id,
+          reqId: id,
+          spaces: exists ? cur.spaces : cur.spaces.map((s) => (s.id === sp.id ? { ...s, requests: [...s.requests, { ...h.req, id, pinned: false }] } : s)),
+        }));
+        setOutcomes((o) => ({ ...o, [id]: { sending: false, result: h.result, error: h.error, seq: (o[id]?.seq ?? 0) + 1 } }));
+      },
+      clearHistory(spaceId: string) {
+        setHistory((list) => list.filter((h) => h.spaceId !== spaceId));
+      },
       deleteSpace(id: string) {
+        setHistory((list) => list.filter((h) => h.spaceId !== id));
         setSaved((st) => {
           if (st.spaces.length < 2) return st;
           const spaces = st.spaces.filter((s) => s.id !== id);
@@ -286,12 +314,21 @@ export function useWorkspaceState() {
         timeoutMs: 30_000,
       });
       setOutcomes((o) => ({ ...o, [r.id]: { sending: false, result, seq } }));
+      record({ result });
     } catch (e) {
       setOutcomes((o) => ({ ...o, [r.id]: { sending: false, error: String(e), seq } }));
+      record({ error: String(e) });
+    }
+
+    function record(reply: Pick<HistoryEntry, "result" | "error">) {
+      const entry: HistoryEntry = { id: uid(), at: Date.now(), spaceId: space.id, req: { ...r }, ...reply };
+      setHistory((list) => [entry, ...list].slice(0, MAX_HISTORY));
     }
   }
 
-  return { spaces, space, req, env, vars, outcome: outcomes[req.id] as Outcome | undefined, send, ...actions };
+  const spaceHistory = useMemo(() => history.filter((h) => h.spaceId === space.id), [history, space.id]);
+
+  return { spaces, space, req, env, vars, history: spaceHistory, outcome: outcomes[req.id] as Outcome | undefined, send, ...actions };
 }
 
 export type Workspace = ReturnType<typeof useWorkspaceState>;
