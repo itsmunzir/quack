@@ -3,10 +3,12 @@
 @import "tailwindcss";
 
 /*
- * Every theme is one self-contained block below. It sets the same tokens and
- * nothing else depends on which theme is active, so a theme can be edited or
- * added without touching anything outside its block. Components only use the
- * Tailwind names mapped here.
+ * Two independent axes:
+ *   data-mode   light or dark: the neutral surfaces, status and method colours
+ *   data-theme  the accent, identical in both modes
+ * Surfaces carry a faint wash of the accent, so each theme reads as its own
+ * colour family. They are recomputed on any [data-theme] element, which lets
+ * a swatch preview a theme other than the active one.
  */
 @theme inline {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
@@ -15,6 +17,7 @@
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-raised: var(--raised);
+  --color-selected: var(--selected);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-text: var(--text);
@@ -29,287 +32,105 @@
   --radius-btn: var(--r-btn);
 }
 
-/*
- * Theme tokens:
- *   bg … muted     surfaces and text
- *   accent(-fg)    primary colour and the text that sits on it
- *   ok/warn/err    status colours
- *   m-*            HTTP method colours, also the palette spaces pick from
- *   r-box/r-btn    corner radius of panels and buttons
- *   label-*        voice of small section labels
- *   tint           how strongly Glow washes the window in the accent
- *   scrim          dim layer behind the command bar
- */
+/* ─── Modes ─────────────────────────────────────────────────────────────── */
 
-/* Paper: the default. Crisp white with near-black ink, like the duck. */
-:root,
-[data-theme="paper"] {
+:root {
   color-scheme: light;
-  --bg: #fafafa;
-  --surface: #ffffff;
-  --raised: #f4f4f5;
-  --line: #e7e7ea;
-  --line-strong: #d4d4d8;
-  --text: #0a0a0b;
-  --muted: #71717a;
-  --accent: #171717;
-  --accent-fg: #ffffff;
-  --ok: #16a34a;
-  --warn: #d97706;
-  --err: #dc2626;
-  --m-get: #16a34a;
-  --m-post: #3d5cf5;
-  --m-put: #d97706;
-  --m-patch: #9333ea;
-  --m-delete: #dc2626;
-  --m-other: #71717a;
+  --base-bg: #f7f7f4;
+  --base-surface: #ffffff;
+  --base-raised: #efefeb;
+  --base-line: #e4e4df;
+  --base-line-strong: #d0d0ca;
+  --text: #121211;
+  --muted: #74746e;
+  --ok: #2f9e5b;
+  --warn: #c27c0e;
+  --err: #d6453d;
+  --m-get: #2f9e5b;
+  --m-post: #3b6fd8;
+  --m-put: #c27c0e;
+  --m-patch: #8a55d6;
+  --m-delete: #d6453d;
+  --m-other: #74746e;
+  --wash: 5%;
+  --wash-surface: 2%;
+  --tint: 24%;
+  --scrim: rgb(0 0 0 / 0.08);
+
   --r-box: 12px;
   --r-btn: 999px;
   --label-case: none;
   --label-track: 0;
   --label-font: var(--font-sans);
-  --tint: 16%;
-  --scrim: rgb(0 0 0 / 0.08);
 }
 
-/* Field: industrial instrument panel. Warm grey, signal orange, square edges. */
-[data-theme="field"] {
-  color-scheme: light;
-  --bg: #e4e2dd;
-  --surface: #efeeea;
-  --raised: #d9d7d1;
-  --line: #c9c6be;
-  --line-strong: #a9a59b;
-  --text: #121212;
-  --muted: #67635b;
-  --accent: #ff4f00;
-  --accent-fg: #ffffff;
-  --ok: #1f7a46;
-  --warn: #b97800;
-  --err: #cf2a1f;
-  --m-get: #1f7a46;
-  --m-post: #ff4f00;
-  --m-put: #b97800;
-  --m-patch: #2a5bd7;
-  --m-delete: #cf2a1f;
-  --m-other: #67635b;
-  --r-box: 3px;
-  --r-btn: 3px;
-  --label-case: uppercase;
-  --label-track: 0.08em;
-  --label-font: var(--font-mono);
-  --tint: 30%;
-  --scrim: rgb(0 0 0 / 0.1);
-}
-
-/* Mochi: soft pastels, round everything. */
-[data-theme="mochi"] {
-  color-scheme: light;
-  --bg: #eff1f5;
-  --surface: #f8f9fc;
-  --raised: #e6e9ef;
-  --line: #dce0e8;
-  --line-strong: #c6cbd8;
-  --text: #4c4f69;
-  --muted: #8c8fa1;
-  --accent: #8839ef;
-  --accent-fg: #ffffff;
-  --ok: #40a02b;
-  --warn: #df8e1d;
-  --err: #d20f39;
-  --m-get: #40a02b;
-  --m-post: #1e66f5;
-  --m-put: #df8e1d;
-  --m-patch: #8839ef;
-  --m-delete: #d20f39;
-  --m-other: #8c8fa1;
-  --r-box: 18px;
-  --r-btn: 999px;
-  --label-case: none;
-  --label-track: 0;
-  --label-font: var(--font-sans);
-  --tint: 38%;
-  --scrim: rgb(0 0 0 / 0.08);
-}
-
-/* Midnight: quiet, precise, nearly black. */
-[data-theme="midnight"] {
+[data-mode="dark"] {
   color-scheme: dark;
-  --bg: #0b0b0d;
-  --surface: #111114;
-  --raised: #18181c;
-  --line: #232329;
-  --line-strong: #33333b;
-  --text: #ededef;
-  --muted: #8a8f98;
-  --accent: #5e6ad2;
-  --accent-fg: #ffffff;
-  --ok: #4cb782;
-  --warn: #f2c94c;
-  --err: #eb5757;
-  --m-get: #4cb782;
-  --m-post: #8b96ff;
-  --m-put: #f2c94c;
-  --m-patch: #bb87fc;
-  --m-delete: #eb5757;
-  --m-other: #8a8f98;
-  --r-box: 8px;
-  --r-btn: 8px;
-  --label-case: none;
-  --label-track: 0;
-  --label-font: var(--font-sans);
-  --tint: 22%;
-  --scrim: rgb(0 0 0 / 0.35);
+  --base-bg: #111113;
+  --base-surface: #1c1c1f;
+  --base-raised: #26262a;
+  --base-line: #2e2e33;
+  --base-line-strong: #3d3d43;
+  --text: #e3e1dc;
+  --muted: #8d8c91;
+  --ok: #5cc58a;
+  --warn: #e5b04f;
+  --err: #f07167;
+  --m-get: #5cc58a;
+  --m-post: #7aa2ff;
+  --m-put: #e5b04f;
+  --m-patch: #b493f5;
+  --m-delete: #f07167;
+  --m-other: #8e8d92;
+  --wash: 5%;
+  --wash-surface: 7%;
+  --tint: 18%;
+  --scrim: rgb(0 0 0 / 0.4);
 }
 
-/* Neon: deep indigo night, saturated syntax colours. */
-[data-theme="neon"] {
-  color-scheme: dark;
-  --bg: #16161e;
-  --surface: #1a1b26;
-  --raised: #24283b;
-  --line: #292e42;
-  --line-strong: #3b4261;
-  --text: #c0caf5;
-  --muted: #737aa2;
-  --accent: #7aa2f7;
-  --accent-fg: #16161e;
-  --ok: #9ece6a;
-  --warn: #e0af68;
-  --err: #f7768e;
-  --m-get: #9ece6a;
-  --m-post: #7aa2f7;
-  --m-put: #e0af68;
-  --m-patch: #bb9af7;
-  --m-delete: #f7768e;
-  --m-other: #737aa2;
-  --r-box: 10px;
-  --r-btn: 999px;
-  --label-case: none;
-  --label-track: 0;
-  --label-font: var(--font-sans);
-  --tint: 20%;
-  --scrim: rgb(0 0 0 / 0.3);
+/* ─── Themes ────────────────────────────────────────────────────────────── */
+
+:root,
+[data-theme="honey"] {
+  --accent: #ddb552;
+  --accent-fg: #1d1704;
 }
 
-/* Ember: warm retro dark, cream text, orange glow. */
-[data-theme="ember"] {
-  color-scheme: dark;
-  --bg: #1d2021;
-  --surface: #282828;
-  --raised: #32302f;
-  --line: #3c3836;
-  --line-strong: #504945;
-  --text: #ebdbb2;
-  --muted: #a89984;
-  --accent: #fe8019;
-  --accent-fg: #1d2021;
-  --ok: #b8bb26;
-  --warn: #fabd2f;
-  --err: #fb4934;
-  --m-get: #b8bb26;
-  --m-post: #83a598;
-  --m-put: #fabd2f;
-  --m-patch: #d3869b;
-  --m-delete: #fb4934;
-  --m-other: #a89984;
-  --r-box: 6px;
-  --r-btn: 6px;
+[data-theme="sage"] {
+  --accent: #86ae8c;
+  --accent-fg: #0e1a10;
+}
+
+[data-theme="periwinkle"] {
+  --accent: #8e96f0;
+  --accent-fg: #11132b;
+}
+
+[data-theme="ink"] {
+  --accent: var(--text);
+  --accent-fg: var(--base-bg);
+  --tint: 8%;
+  --r-box: 4px;
+  --r-btn: 4px;
   --label-case: uppercase;
   --label-track: 0.06em;
   --label-font: var(--font-mono);
-  --tint: 20%;
-  --scrim: rgb(0 0 0 / 0.3);
 }
 
-/* Mocha: Catppuccin Mocha. Cozy pastels on a deep base. */
-[data-theme="mocha"] {
-  color-scheme: dark;
-  --bg: #181825;
-  --surface: #1e1e2e;
-  --raised: #313244;
-  --line: #2c2d40;
-  --line-strong: #45475a;
-  --text: #cdd6f4;
-  --muted: #9399b2;
-  --accent: #cba6f7;
-  --accent-fg: #1e1e2e;
-  --ok: #a6e3a1;
-  --warn: #f9e2af;
-  --err: #f38ba8;
-  --m-get: #a6e3a1;
-  --m-post: #89b4fa;
-  --m-put: #fab387;
-  --m-patch: #cba6f7;
-  --m-delete: #f38ba8;
-  --m-other: #9399b2;
-  --r-box: 14px;
-  --r-btn: 999px;
-  --label-case: none;
-  --label-track: 0;
-  --label-font: var(--font-sans);
-  --tint: 20%;
-  --scrim: rgb(0 0 0 / 0.3);
+:root,
+[data-theme] {
+  --bg: color-mix(in oklab, var(--accent) var(--wash), var(--base-bg));
+  --surface: color-mix(in oklab, var(--accent) var(--wash-surface), var(--base-surface));
+  --raised: color-mix(in oklab, var(--accent) var(--wash), var(--base-raised));
+  --line: color-mix(in oklab, var(--accent) calc(var(--wash) * 1.4), var(--base-line));
+  --line-strong: color-mix(in oklab, var(--accent) calc(var(--wash) * 1.4), var(--base-line-strong));
+  /* The fill of whatever is picked: a row, a pin, a tab. White in light, a lifted accent grey in dark. */
+  --selected: var(--surface);
 }
 
-/* Rosé Pine: soho vibes. Muted violet night, rose and gold. */
-[data-theme="rosepine"] {
-  color-scheme: dark;
-  --bg: #191724;
-  --surface: #1f1d2e;
-  --raised: #26233a;
-  --line: #2a273f;
-  --line-strong: #403d52;
-  --text: #e0def4;
-  --muted: #908caa;
-  --accent: #ebbcba;
-  --accent-fg: #191724;
-  --ok: #9ccfd8;
-  --warn: #f6c177;
-  --err: #eb6f92;
-  --m-get: #9ccfd8;
-  --m-post: #c4a7e7;
-  --m-put: #f6c177;
-  --m-patch: #ebbcba;
-  --m-delete: #eb6f92;
-  --m-other: #908caa;
-  --r-box: 12px;
-  --r-btn: 999px;
-  --label-case: none;
-  --label-track: 0;
-  --label-font: var(--font-sans);
-  --tint: 20%;
-  --scrim: rgb(0 0 0 / 0.3);
-}
-
-/* Black: pitch dark for OLED screens and night owls. */
-[data-theme="black"] {
-  color-scheme: dark;
-  --bg: #000000;
-  --surface: #0b0b0b;
-  --raised: #161616;
-  --line: #1e1e1e;
-  --line-strong: #2c2c2c;
-  --text: #f4f4f5;
-  --muted: #858589;
-  --accent: #ffffff;
-  --accent-fg: #000000;
-  --ok: #4ade80;
-  --warn: #fbbf24;
-  --err: #f87171;
-  --m-get: #4ade80;
-  --m-post: #60a5fa;
-  --m-put: #fbbf24;
-  --m-patch: #c084fc;
-  --m-delete: #f87171;
-  --m-other: #858589;
-  --r-box: 12px;
-  --r-btn: 999px;
-  --label-case: none;
-  --label-track: 0;
-  --label-font: var(--font-sans);
-  --tint: 10%;
-  --scrim: rgb(0 0 0 / 0.5);
+[data-mode="dark"],
+[data-mode="dark"] [data-theme] {
+  --selected: color-mix(in oklab, var(--accent) 14%, var(--base-raised));
 }
 
 /* Registered as colours so switching spaces (and so themes) cross-fades the glow. */
@@ -328,7 +149,7 @@
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
   --dur: 180ms;
   --sa: var(--accent);
-  --sb: color-mix(in oklab, var(--accent) 70%, var(--m-post));
+  --sb: color-mix(in oklab, var(--accent) 55%, var(--base-bg));
   transition:
     --sa 600ms var(--ease),
     --sb 600ms var(--ease);
@@ -369,10 +190,16 @@ body {
   scrollbar-color: var(--line-strong) transparent;
 }
 
-.label {
+/* The small UI voice: labels, tabs, chips, buttons. A theme can make it technical. */
+.label,
+.voice,
+.chip,
+.send-btn {
   font-family: var(--label-font);
   text-transform: var(--label-case);
   letter-spacing: var(--label-track);
+}
+.label {
   font-size: 11px;
   font-weight: 600;
   color: var(--muted);
@@ -507,7 +334,7 @@ body {
   gap: 6px;
   height: 22px;
   padding: 0 9px;
-  border-radius: 999px;
+  border-radius: var(--r-btn);
   animation: fade 200ms var(--ease) both;
 }
 
@@ -558,7 +385,7 @@ body {
   background: color-mix(in oklab, var(--surface) 66%, transparent);
 }
 .pin.on {
-  background: var(--surface);
+  background: var(--selected);
   box-shadow:
     inset 0 0 0 0.5px color-mix(in oklab, var(--text) 12%, transparent),
     0 1px 3px rgb(0 0 0 / 0.08);
@@ -571,7 +398,7 @@ body {
   background: color-mix(in oklab, var(--surface) 36%, transparent);
 }
 .req-row.on {
-  background: color-mix(in oklab, var(--surface) 86%, transparent);
+  background: var(--selected);
   box-shadow:
     0 0 0 0.5px color-mix(in oklab, var(--text) 8%, transparent),
     0 1px 2px rgb(0 0 0 / 0.05);

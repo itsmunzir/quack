@@ -1,9 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import { applyGlow, loadGlow } from "./themes";
+import { applyGlow, applyMode, loadGlow, loadMode } from "./themes";
 import "./styles.css";
 
+applyMode(loadMode());
 applyGlow(loadGlow());
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

@@ -17,10 +17,10 @@ Builds aren't code-signed yet. On Windows, SmartScreen may warn: choose "More in
 ## Features
 
 - Send any HTTP request and read the response, with JSON highlighting
-- Spaces: up to nine collections of saved requests, each with its own colour, plus pinned favourites
+- Spaces: up to nine collections of saved requests, each wearing its own theme, plus pinned favourites
 - A command bar (`Ctrl+K`) to jump to any request or space and run actions
 - Edit query params as rows, kept in sync with the URL
-- Nine themes, light and dark: Paper, Field, Mochi, Midnight, Neon, Ember, Mocha, Rosé Pine and Black (`Ctrl+Shift+T` cycles them), with a gradient, tinted or plain background
+- Four themes, Honey, Sage, Periwinkle and Ink (square and technical), each in light and dark (or following your system), with an optional accent glow (`Ctrl+Shift+T` cycles themes)
 - Cookies, redirects and gzip/brotli/zstd decoding handled for you
 - Small and fast: a native app, not Electron
 
@@ -32,7 +32,7 @@ Builds aren't code-signed yet. On Windows, SmartScreen may warn: choose "More in
 | `Ctrl+K` | Command bar |
 | `Ctrl+N` / `Ctrl+D` | New / duplicate request |
 | `Ctrl+1`…`9` | Switch space |
-| `Ctrl+Shift+T` | Next theme |
+| `Ctrl+Shift+T` | Next theme for this space |
 
 ## Stack
 
@@ -49,8 +49,9 @@ npm install
 npm start        # runs the app with hot reload
 ```
 
-Themes live in `src/styles.css`, one self-contained block each. To add one, copy a block, give it a
-new `data-theme` id and list it in `src/themes.ts`.
+Themes live in `src/styles.css`. A theme is just an accent colour; light and dark surfaces come from the
+mode and pick up a faint wash of the accent. To add one, add a `data-theme` block with `--accent` and
+`--accent-fg`, then list it in `src/themes.ts`.
 
 ## Brand
 

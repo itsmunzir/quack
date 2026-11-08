@@ -1,18 +1,23 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useWorkspaceState, WorkspaceContext } from "./store";
-import { applyGlow, applyTheme, loadGlow, nextTheme } from "./themes";
+import { applyGlow, applyMode, applyTheme, loadGlow, loadMode, nextTheme, onSystemModeChange } from "./themes";
 import { ThemePicker } from "./ui";
 import { Palette } from "./Palette";
 import { Spaces } from "./Spaces";
 
 export default function App() {
   const ws = useWorkspaceState();
+  const [mode, setMode] = useState(loadMode);
   const [glow, setGlow] = useState(loadGlow);
   const [palette, setPalette] = useState(false);
   const { theme } = ws.space;
 
   // Layout effect so a space's theme is painted before the first frame, with no flash.
   useLayoutEffect(() => applyTheme(theme), [theme]);
+  useLayoutEffect(() => {
+    applyMode(mode);
+    if (mode === "system") return onSystemModeChange(() => applyMode("system"));
+  }, [mode]);
   useEffect(() => applyGlow(glow), [glow]);
 
   // Registered once; the ref always points at a handler that sees fresh state.
@@ -46,13 +51,15 @@ export default function App() {
             spaceName={ws.space.name}
             onChange={(t) => ws.setSpaceTheme(ws.space.id, t)}
             onApplyAll={() => ws.setAllThemes(theme)}
+            mode={mode}
+            onMode={setMode}
             glow={glow}
             onGlow={setGlow}
           />
         }
         openPalette={() => setPalette(true)}
       />
-      <Palette open={palette} onClose={() => setPalette(false)} onToggleGlow={() => setGlow((g) => !g)} />
+      <Palette open={palette} onClose={() => setPalette(false)} onMode={setMode} onToggleGlow={() => setGlow((g) => !g)} />
     </WorkspaceContext.Provider>
   );
 }

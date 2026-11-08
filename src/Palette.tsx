@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MAX_SPACES, reqTitle, useWorkspace } from "./store";
-import { THEMES } from "./themes";
-import { Icon, ICONS, methodColor, methodShort, SpaceDot, Swatch } from "./ui";
+import { MODES, THEMES, type Mode } from "./themes";
+import { Icon, ICONS, methodColor, methodShort, SpaceDot } from "./ui";
 
 interface Item {
   id: string;
@@ -14,7 +14,7 @@ interface Item {
 }
 
 /** Ctrl K: jump to any request or space, or run an action. */
-export function Palette({ open, onClose, onToggleGlow }: { open: boolean; onClose: () => void; onToggleGlow: () => void }) {
+export function Palette({ open, onClose, onMode, onToggleGlow }: { open: boolean; onClose: () => void; onMode: (m: Mode) => void; onToggleGlow: () => void }) {
   const ws = useWorkspace();
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
@@ -61,13 +61,14 @@ export function Palette({ open, onClose, onToggleGlow }: { open: boolean; onClos
       ...(ws.spaces.length < MAX_SPACES ? [{ id: "new-space", group: "Actions", label: "New space", icon: <Icon d={ICONS.plus} />, run: () => ws.addSpace() }] : []),
     );
     for (const t of THEMES)
-      out.push({ id: `theme-${t.id}`, group: "Appearance", label: `Theme: ${t.name}`, detail: `for ${ws.space.name}`, icon: <Swatch theme={t.id} />, run: () => ws.setSpaceTheme(ws.space.id, t.id) });
+      out.push({ id: `theme-${t.id}`, group: "Appearance", label: `Theme: ${t.name}`, detail: `for ${ws.space.name}`, icon: <SpaceDot theme={t.id} className="size-3" />, run: () => ws.setSpaceTheme(ws.space.id, t.id) });
+    for (const m of MODES) out.push({ id: `mode-${m.id}`, group: "Appearance", label: `Mode: ${m.name}`, icon: <Icon d={ICONS.palette} />, run: () => onMode(m.id) });
     out.push(
       { id: "theme-all", group: "Appearance", label: "Use this theme for all spaces", icon: <Icon d={ICONS.palette} />, run: () => ws.setAllThemes(ws.space.theme) },
       { id: "glow", group: "Appearance", label: "Toggle glow", icon: <Icon d={ICONS.palette} />, run: onToggleGlow },
     );
     return out;
-  }, [ws, onToggleGlow]);
+  }, [ws, onMode, onToggleGlow]);
 
   const shown = useMemo(() => {
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);

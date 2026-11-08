@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { sendRequest, type Header, type SendResult } from "./api";
-import { isThemeId, type ThemeId } from "./themes";
+import { DEFAULT_THEME, isThemeId, type ThemeId } from "./themes";
 
 export interface Req {
   id: string;
@@ -53,7 +53,7 @@ function starter(): Space[] {
     {
       id: uid(),
       name: "Playground",
-      theme: "paper",
+      theme: "honey",
       requests: [
         newReq({ name: "Hello httpbin", url: "https://httpbin.org/get?pond=north", pinned: true }),
         newReq({
@@ -69,7 +69,7 @@ function starter(): Space[] {
     {
       id: uid(),
       name: "Weather",
-      theme: "mochi",
+      theme: "sage",
       requests: [newReq({ name: "Forecast", url: "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m" })],
     },
   ];
@@ -93,17 +93,6 @@ function isReq(r: unknown): r is Req {
   return !!o && isStr(o.id) && isStr(o.name) && isStr(o.method) && isStr(o.url) && isStr(o.body) && Array.isArray(o.headers) && o.headers.every(isHeader);
 }
 
-/** Before themes moved onto spaces there was one global theme; carry it over. */
-function legacyTheme(): ThemeId {
-  try {
-    const v = localStorage.getItem("quack.theme");
-    if (isThemeId(v)) return v;
-  } catch {
-    // Fall through to the default.
-  }
-  return "paper";
-}
-
 /** Reads the saved workspace, dropping anything malformed instead of crashing on it. */
 function load(): Saved {
   try {
@@ -116,7 +105,7 @@ function load(): Saved {
         return {
           id: sp.id,
           name: sp.name,
-          theme: isThemeId(sp.theme) ? sp.theme : legacyTheme(),
+          theme: isThemeId(sp.theme) ? sp.theme : DEFAULT_THEME,
           requests: requests.length ? requests : [newReq()],
         };
       });

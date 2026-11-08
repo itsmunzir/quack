@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { isTauri, type Header, type SendResult } from "./api";
 import { BODYLESS, METHODS, parseParams, withParams, type Outcome, type Req } from "./store";
-import { THEMES, type ThemeId } from "./themes";
+import { MODES, THEMES, type Mode, type ThemeId } from "./themes";
 import { Duck } from "./Duck";
 
 /* ─── Small helpers ─────────────────────────────────────────────────────── */
@@ -18,7 +18,7 @@ export function formatBytes(n: number) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export const statusTone = (s: number) => (s < 300 ? "ok" : s < 400 ? "accent" : s < 500 ? "warn" : "err");
+export const statusTone = (s: number) => (s < 300 ? "ok" : s < 400 ? "m-post" : s < 500 ? "warn" : "err");
 
 export function useClickOutside<T extends HTMLElement>(onOutside: () => void) {
   const ref = useRef<T>(null);
@@ -99,28 +99,39 @@ export function MenuItem({ active, onClick, children }: { active?: boolean; onCl
   );
 }
 
-/** A theme preview drawn with that theme's own colours. */
-export function Swatch({ theme }: { theme: ThemeId }) {
-  return (
-    <span data-theme={theme} className="flex h-4 w-6 shrink-0 overflow-hidden rounded-[4px] ring-1 ring-line">
-      <span className="flex-1 bg-bg" />
-      <span className="flex-1 bg-raised" />
-      <span className="flex-1 bg-accent" />
-    </span>
-  );
-}
-
-/** A space's marker: a dot in its theme's accent. */
+/** A theme's marker: a dot in its accent. Marks spaces too. */
 export function SpaceDot({ theme, className = "size-2.5" }: { theme: ThemeId; className?: string }) {
   return <span data-theme={theme} className={`shrink-0 rounded-full bg-accent ring-1 ring-line-strong ${className}`} />;
 }
 
-/** The current space's theme, plus the Glow switch. */
+/** A row of mutually exclusive options, like a small segmented switch. */
+function Segmented<T extends string>({ label, options, value, onChange }: { label: string; options: readonly { id: T; name: string }[]; value: T; onChange: (id: T) => void }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="flex rounded-[calc(var(--r-box)-4px)] bg-raised p-0.5">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          role="radio"
+          aria-checked={o.id === value}
+          onClick={() => onChange(o.id)}
+          className={`voice h-7 flex-1 rounded-[calc(var(--r-box)-6px)] text-[12px] font-medium transition-colors ${o.id === value ? "bg-selected text-text shadow-sm" : "text-muted hover:text-text"}`}
+        >
+          {o.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The current space's theme, light or dark, and the Glow switch. */
 export function ThemePicker({
   value,
   spaceName,
   onChange,
   onApplyAll,
+  mode,
+  onMode,
   glow,
   onGlow,
 }: {
@@ -128,6 +139,8 @@ export function ThemePicker({
   spaceName: string;
   onChange: (id: ThemeId) => void;
   onApplyAll: () => void;
+  mode: Mode;
+  onMode: (mode: Mode) => void;
   glow: boolean;
   onGlow: (on: boolean) => void;
 }) {
@@ -137,39 +150,34 @@ export function ThemePicker({
   return (
     <div ref={ref} className="relative">
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="btn btn-ghost h-8 gap-2 px-3 text-xs" title="Theme">
-        <Swatch theme={current.id} />
+        <SpaceDot theme={current.id} className="size-3" />
         {current.name}
       </button>
       {open && (
         <Menu align="right" width="w-64">
-          <div className="truncate px-2.5 pt-2 pb-1 text-[12px] font-semibold">Theme for {spaceName}</div>
-          {(["Light", "Dark"] as const).map((group) => (
-            <div key={group}>
-              <div className="label px-2.5 pt-2 pb-1">{group}</div>
-              {THEMES.filter((t) => t.dark === (group === "Dark")).map((t) => (
-                <MenuItem key={t.id} active={t.id === value} onClick={() => onChange(t.id)}>
-                  <Swatch theme={t.id} />
-                  <span className="flex-1 text-[13px] font-medium">{t.name}</span>
-                  <span className="text-[11px] text-muted">{t.hint}</span>
-                </MenuItem>
-              ))}
-            </div>
-          ))}
-          <div className="mt-1 flex flex-col gap-0.5 border-t border-line pt-1">
-            <MenuItem
-              onClick={() => {
-                onApplyAll();
-                setOpen(false);
-              }}
-            >
-              <span className="flex-1 text-[13px]">Use {current.name} for all spaces</span>
+          <div className="label px-2.5 pt-2 pb-1">Theme for {spaceName}</div>
+          {THEMES.map((t) => (
+            <MenuItem key={t.id} active={t.id === value} onClick={() => onChange(t.id)}>
+              <SpaceDot theme={t.id} className="size-3" />
+              <span className="flex-1 text-[13px] font-medium">{t.name}</span>
             </MenuItem>
+          ))}
+          <MenuItem
+            onClick={() => {
+              onApplyAll();
+              setOpen(false);
+            }}
+          >
+            <span className="flex-1 text-[13px] text-muted">Use {current.name} for all spaces</span>
+          </MenuItem>
+          <div className="mt-1 flex flex-col gap-1 border-t border-line px-1 pt-2 pb-1">
+            <Segmented label="Mode" options={MODES} value={mode} onChange={onMode} />
             <button
               type="button"
               role="switch"
               aria-checked={glow}
               onClick={() => onGlow(!glow)}
-              className="flex h-8 w-full items-center justify-between rounded-[calc(var(--r-box)-4px)] px-2.5 text-left text-[13px] transition-colors hover:bg-raised"
+              className="flex h-8 w-full items-center justify-between rounded-[calc(var(--r-box)-4px)] px-1.5 text-left text-[13px] transition-colors hover:bg-raised"
             >
               Glow
               <span className={`relative h-[18px] w-8 rounded-full transition-colors ${glow ? "bg-accent" : "bg-line-strong"}`}>
@@ -177,7 +185,7 @@ export function ThemePicker({
               </span>
             </button>
           </div>
-          <div className="flex items-center justify-between px-2.5 pt-1.5 pb-1.5 text-[11px] text-muted">
+          <div className="flex items-center justify-between px-2.5 pt-0.5 pb-1.5 text-[11px] text-muted">
             Next theme <span className="kbd kbd-quiet">Ctrl Shift T</span>
           </div>
         </Menu>
@@ -250,7 +258,7 @@ function Tabs<T extends string>({ value, onChange, options }: { value: T; onChan
     <div ref={wrap} className="relative flex gap-0.5 rounded-btn bg-raised p-0.5" role="tablist">
       {thumb && (
         <span
-          className="absolute top-0.5 bottom-0.5 rounded-btn bg-surface shadow-[0_1px_2px_rgb(0_0_0/0.12),0_0_0_1px_var(--line)] transition-[left,width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+          className="absolute top-0.5 bottom-0.5 rounded-btn bg-selected shadow-[0_1px_2px_rgb(0_0_0/0.12),0_0_0_1px_var(--line)] transition-[left,width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
           style={{ left: thumb.left, width: thumb.width }}
         />
       )}
@@ -261,7 +269,7 @@ function Tabs<T extends string>({ value, onChange, options }: { value: T; onChan
           role="tab"
           aria-selected={id === value}
           onClick={() => onChange(id)}
-          className={`relative z-10 flex h-7 items-center gap-1.5 rounded-btn px-3 text-xs font-medium transition-colors ${id === value ? "text-text" : "text-muted hover:text-text"}`}
+          className={`voice relative z-10 flex h-7 items-center gap-1.5 rounded-btn px-3 text-xs font-medium transition-colors ${id === value ? "text-text" : "text-muted hover:text-text"}`}
         >
           {label}
           {count ? <span className="font-mono text-[10px] text-muted">{count}</span> : null}

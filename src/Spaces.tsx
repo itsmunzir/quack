@@ -118,12 +118,12 @@ function Card() {
           role="separator"
           aria-orientation="vertical"
           aria-label="Resize panes"
-          className="split-handle group flex cursor-col-resize items-center justify-center"
+          className="split-handle group flex cursor-col-resize justify-center"
           onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)}
           onPointerMove={resize}
           onDoubleClick={() => setSplit(DEFAULT_SPLIT)}
         >
-          <i className="h-10 w-[3px] rounded-full bg-line transition-colors duration-150 group-hover:bg-line-strong" />
+          <i className="w-px bg-line transition-[background-color,width] duration-150 group-hover:w-0.5 group-hover:bg-accent group-active:w-0.5 group-active:bg-accent" />
         </div>
         <div className="flex min-h-0 min-w-0 flex-col p-4">
           <ResponseView outcome={ws.outcome} meta={(r) => <Chips status={r.status} reason={r.statusReason} ms={r.elapsedMs} size={r.sizeBytes} />} />
@@ -178,7 +178,7 @@ function ReqRow({ r, space }: { r: Req; space: Space }) {
           <span className="truncate">{reqTitle(r)}</span>
         </button>
       )}
-      <RowButton label={r.pinned ? "Unpin" : "Pin"} icon={ICONS.pin} filled={r.pinned} className={r.pinned ? "text-text" : hover} onClick={() => ws.updateReq(r.id, { pinned: !r.pinned })} />
+      <RowButton label={r.pinned ? "Unpin" : "Pin"} icon={ICONS.pin} filled={r.pinned} className={r.pinned ? "text-muted" : hover} onClick={() => ws.updateReq(r.id, { pinned: !r.pinned })} />
       <RowButton label="Delete" icon={ICONS.x} className={hover} onClick={() => ws.deleteReq(r.id)} />
     </div>
   );
@@ -274,7 +274,7 @@ function SpaceMenu({ onRename }: { onRename: () => void }) {
         aria-expanded={open}
         onClick={() => (open ? close() : setOpen(true))}
         onDoubleClick={onRename}
-        className="flex max-w-full items-center gap-1.5 rounded-[6px] px-1.5 py-0.5 text-[12px] font-semibold text-muted transition-colors hover:bg-text/6 hover:text-text"
+        className="voice flex max-w-full items-center gap-1.5 rounded-[6px] px-1.5 py-0.5 text-[12px] font-semibold text-muted transition-colors hover:bg-text/6 hover:text-text"
       >
         <SpaceDot theme={ws.space.theme} />
         <span className="truncate">{ws.space.name}</span>
