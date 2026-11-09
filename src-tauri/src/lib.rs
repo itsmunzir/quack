@@ -54,6 +54,47 @@ pub struct SendResult {
     body: String,
     size_bytes: usize,
     elapsed_ms: u128,
+    /// The body as a `data:` URL when it's an image small enough to show.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image: Option<String>,
+}
+
+/// Largest image shown inline in the response view.
+const MAX_IMAGE_BYTES: usize = 15 * 1024 * 1024;
+
+/// A `data:` URL for an image body, so the response view can show it.
+fn image_url(headers: &[Header], body: &[u8]) -> Option<String> {
+    let kind = headers
+        .iter()
+        .find(|(k, _)| k.eq_ignore_ascii_case("content-type"))?
+        .1
+        .split(';')
+        .next()?
+        .trim()
+        .to_ascii_lowercase();
+    if !kind.starts_with("image/") || body.is_empty() || body.len() > MAX_IMAGE_BYTES {
+        return None;
+    }
+    Some(format!("data:{kind};base64,{}", base64(body)))
+}
+
+fn base64(bytes: &[u8]) -> String {
+    const ABC: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let n = chunk
+            .iter()
+            .enumerate()
+            .fold(0u32, |n, (i, &b)| n | (b as u32) << (16 - 8 * i));
+        for i in 0..4 {
+            out.push(if i <= chunk.len() {
+                ABC[(n >> (18 - 6 * i)) as usize & 63] as char
+            } else {
+                '='
+            });
+        }
+    }
+    out
 }
 
 /// Sends one HTTP request and returns the full response. `cancel_request` with
@@ -83,6 +124,7 @@ async fn send_request(
     let res = reply?;
 
     Ok(SendResult {
+        image: image_url(&res.headers, &res.body),
         status: res.status,
         status_reason: res.reason,
         url: res.url,
@@ -152,4 +194,37 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running Quack");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn base64_matches_the_standard() {
+        for (raw, enc) in [
+            ("", ""),
+            ("f", "Zg=="),
+            ("fo", "Zm8="),
+            ("foo", "Zm9v"),
+            ("foob", "Zm9vYg=="),
+            ("fooba", "Zm9vYmE="),
+            ("foobar", "Zm9vYmFy"),
+        ] {
+            assert_eq!(base64(raw.as_bytes()), enc);
+        }
+        assert_eq!(base64(&[0xff, 0xfe, 0x00]), "//4A");
+    }
+
+    #[test]
+    fn only_images_become_data_urls() {
+        let h = |v: &str| vec![("Content-Type".to_string(), v.to_string())];
+        assert_eq!(
+            image_url(&h("image/PNG; x=1"), b"ab").as_deref(),
+            Some("data:image/png;base64,YWI=")
+        );
+        assert_eq!(image_url(&h("application/json"), b"{}"), None);
+        assert_eq!(image_url(&h("image/png"), b""), None);
+        assert_eq!(image_url(&[], b"ab"), None);
+    }
 }

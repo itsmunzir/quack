@@ -106,6 +106,9 @@ Leaving is just as easy: export any space, back up everything in one file, or co
 - Bodies as raw text, URL-encoded forms, or multipart with file uploads
 - Cancel a slow request mid-flight
 - JSON responses highlighted, with headers, status, timing and size at a glance
+- Fold any object or array, search the body (`Ctrl+F`), or type `$.data.items[0]` to see just that part
+- Click a key to copy its path, ready for a capture; switch to Raw for the exact text
+- Image responses shown as images
 - Cookies, redirects and gzip, brotli and zstd decoding handled for you
 
 **Variables and auth**
@@ -138,6 +141,7 @@ Leaving is just as easy: export any space, back up everything in one file, or co
 | `Ctrl` `1`…`9` | Switch space |
 | `Ctrl` `E` | Next environment |
 | `Ctrl` `H` | History |
+| `Ctrl` `F` | Search the response |
 | `Ctrl` `Shift` `T` | Next theme for this space |
 
 On macOS, use `Cmd` where it says `Ctrl`.

@@ -9,6 +9,7 @@ import { hasVars, prepare, resolve } from "./env";
 import { AUTH_TYPES, blankAuth, type Auth } from "./auth";
 import { BODY_TYPES, type FormField } from "./body";
 import { CAPTURE_FROM, extract, type Capture } from "./capture";
+import { BodyView } from "./BodyView";
 
 /* ─── Small helpers ─────────────────────────────────────────────────────── */
 
@@ -841,11 +842,11 @@ export function ResponseView({ outcome, meta }: { outcome?: Outcome; meta: (r: S
             ["headers", "Headers", r.headers.length],
           ]}
         />
-        <CopyButton label="Copy" text={() => (tab === "body" ? r.body : r.headers.map(([k, v]) => `${k}: ${v}`).join("\n"))} />
+        {!(tab === "body" && r.image) && <CopyButton label="Copy" text={() => (tab === "body" ? r.body : r.headers.map(([k, v]) => `${k}: ${v}`).join("\n"))} />}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto rounded-box border border-line bg-bg/60 p-3">
+      <div className={`min-h-0 flex-1 rounded-box border border-line bg-bg/60 ${tab === "body" ? "overflow-hidden" : "overflow-auto p-3"}`}>
         {tab === "body" ? (
-          <Body text={r.body} />
+          <BodyView text={r.body} image={r.image} />
         ) : (
           <table className="enter w-full font-mono text-[12.5px]">
             <tbody>
@@ -885,52 +886,6 @@ function Empty({ title, note, mascot }: { title: string; note?: string; mascot?:
       {note && <p className="max-w-72 text-xs text-muted">{note}</p>}
     </div>
   );
-}
-
-/** Pretty-prints JSON and tints it with the theme palette. */
-function Body({ text }: { text: string }) {
-  const lines = useMemo(() => {
-    try {
-      return highlight(JSON.stringify(JSON.parse(text), null, 2));
-    } catch {
-      return null;
-    }
-  }, [text]);
-  const cls = "font-mono text-[13px] leading-relaxed";
-  if (!lines) return <pre className={`${cls} enter break-all whitespace-pre-wrap`}>{text}</pre>;
-  return (
-    <div className={`${cls} json`}>
-      {lines.map((parts, i) => (
-        <div key={i} className="break-all whitespace-pre-wrap">
-          {parts.length ? parts : " "}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// A JSON string (optionally followed by a colon, making it a key), a literal, or a number.
-// (\x5c is a literal backslash: it matches escapes like \" inside strings.)
-const JSON_TOKEN = /("(?:\x5c.|[^"\x5c])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
-
-function highlight(json: string): ReactNode[][] {
-  return json.split("\n").map((line, li) => {
-    const parts: ReactNode[] = [];
-    let last = 0;
-    for (const m of line.matchAll(JSON_TOKEN)) {
-      if (m.index > last) parts.push(line.slice(last, m.index));
-      const [whole, str, colon, lit, num] = m;
-      const k = `${li}:${m.index}`;
-      if (str && colon) parts.push(<span key={k} className="j-key">{str}</span>, colon);
-      else if (str) parts.push(<span key={k} className="j-str">{str}</span>);
-      else if (lit) parts.push(<span key={k} className="j-lit">{lit}</span>);
-      else if (num) parts.push(<span key={k} className="j-num">{num}</span>);
-      else parts.push(whole);
-      last = m.index + whole.length;
-    }
-    if (last < line.length) parts.push(line.slice(last));
-    return parts;
-  });
 }
 
 /* ─── Inline rename ─────────────────────────────────────────────────────── */

@@ -44,9 +44,12 @@ export function loadHistory(): HistoryEntry[] {
 }
 
 export function saveHistory(list: HistoryEntry[]) {
-  const slim = list.map((h) =>
-    h.result && h.result.body.length > MAX_KEPT_BODY ? { ...h, result: { ...h.result, body: `(The ${Math.round(h.result.body.length / 1024)} KB body is not kept between sessions.)` } } : h,
-  );
+  const slim = list.map((h) => {
+    if (!h.result) return h;
+    // Images and big bodies stay in memory only; storage is small.
+    const { image: _, ...result } = h.result;
+    return result.body.length > MAX_KEPT_BODY ? { ...h, result: { ...result, body: `(The ${Math.round(result.body.length / 1024)} KB body is not kept between sessions.)` } } : { ...h, result };
+  });
   try {
     localStorage.setItem(KEY, JSON.stringify(slim));
   } catch {

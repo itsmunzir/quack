@@ -41,7 +41,11 @@ export default function App() {
       const ids = [...ws.space.envs.map((x) => x.id), null];
       ws.selectEnv(ids[(ids.indexOf(ws.space.envId) + 1) % ids.length]);
     });
-    else if (key === "n") run(ws.addReq);
+    else if (key === "f") {
+      // Searches the response when one is showing; otherwise the key does what it normally does.
+      const search = document.querySelector<HTMLInputElement>("[data-response-search]");
+      if (search) run(() => search.select());
+    } else if (key === "n") run(ws.addReq);
     else if (key === "d") run(() => ws.duplicateReq(ws.req.id));
     else if (/^[1-9]$/.test(e.key) && ws.spaces[+e.key - 1]) run(() => ws.selectSpace(ws.spaces[+e.key - 1].id));
   };

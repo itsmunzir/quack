@@ -327,6 +327,46 @@ body {
 .j-num {
   color: var(--warn);
 }
+.json mark {
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--accent) 30%, transparent);
+  color: inherit;
+}
+.json mark.cur {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.json .fold {
+  display: grid;
+  place-items: center;
+  height: 1lh;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.json .line:hover .fold,
+.json .fold[aria-expanded="false"],
+.json .fold:focus-visible {
+  opacity: 1;
+}
+.json .fold:hover {
+  color: var(--text);
+}
+.json .folded {
+  margin-inline: 0.25ch;
+  border-radius: 4px;
+  background: var(--raised);
+  padding-inline: 0.5ch;
+  color: var(--muted);
+  font-size: 0.92em;
+}
+.json .folded:hover {
+  color: var(--text);
+}
+/* A checkerboard behind images, so transparent pixels read as transparent. */
+.checker {
+  background: repeating-conic-gradient(color-mix(in oklab, var(--text) 8%, transparent) 0 25%, transparent 0 50%) 0 0 / 16px 16px;
+}
 
 .chip {
   display: inline-flex;

@@ -28,6 +28,8 @@ export interface SendResult {
   body: string;
   sizeBytes: number;
   elapsedMs: number;
+  /** The body as a `data:` URL, for images. */
+  image?: string;
 }
 
 export const isTauri = "__TAURI_INTERNALS__" in window;
