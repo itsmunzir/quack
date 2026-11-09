@@ -15,12 +15,12 @@ export function EnvPicker() {
   const ref = useClickOutside<HTMLDivElement>(close);
 
   const chip = (on: boolean) =>
-    `voice h-7 rounded-btn px-3 text-[12px] font-medium transition-colors ${on ? "bg-selected text-text shadow-[0_0_0_1px_var(--line)]" : "text-muted hover:bg-raised hover:text-text"}`;
+    `h-7 rounded-btn px-3 text-[12px] font-medium transition-colors ${on ? "bg-selected text-text shadow-[0_0_0_1px_var(--line)]" : "text-muted hover:bg-raised hover:text-text"}`;
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" aria-expanded={open} onClick={() => (open ? close() : setOpen(true))} className="btn btn-ghost voice h-8 gap-2 px-3 text-xs" title="Environment (Ctrl E)">
-        <Icon d={ICONS.braces} className={`size-3.5 ${env ? "text-accent" : ""}`} />
+      <button type="button" aria-expanded={open} onClick={() => (open ? close() : setOpen(true))} className="btn btn-ghost h-8 gap-2 px-3 text-xs" title="Environment (Ctrl E)">
+        <Icon d={ICONS.braces} className={`size-3.5 ${env ? "text-accent-strong" : ""}`} />
         {env?.name ?? "No environment"}
         <Chevron className="size-3 opacity-60" />
       </button>
@@ -49,7 +49,7 @@ export function EnvPicker() {
                   placeholder="Environment name"
                   spellCheck={false}
                   aria-label="Environment name"
-                  className="h-8 min-w-0 flex-1 rounded-[6px] bg-transparent px-2 text-[13px] font-semibold outline-none transition-colors hover:bg-raised/70 focus:bg-raised"
+                  className="h-8 min-w-0 flex-1 rounded-sm bg-transparent px-2 text-[13px] font-semibold outline-none transition-colors hover:bg-raised/70 focus:bg-raised"
                 />
                 <button
                   type="button"

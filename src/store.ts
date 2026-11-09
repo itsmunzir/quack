@@ -77,7 +77,7 @@ function starter(): Space[] {
     {
       id: uid(),
       name: "Playground",
-      theme: "honey",
+      theme: "ink",
       requests: [
         newReq({ name: "Hello httpbin", url: "https://httpbin.org/get?pond=north", pinned: true }),
         newReq({

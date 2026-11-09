@@ -1,14 +1,14 @@
 /** Colours live in styles.css; this list only names the themes for the picker. */
 export const THEMES = [
+  { id: "ink", name: "Ink" },
   { id: "honey", name: "Honey" },
   { id: "sage", name: "Sage" },
   { id: "periwinkle", name: "Periwinkle" },
-  { id: "ink", name: "Ink" },
 ] as const;
 
 export type ThemeId = (typeof THEMES)[number]["id"];
 
-export const DEFAULT_THEME: ThemeId = "honey";
+export const DEFAULT_THEME: ThemeId = "ink";
 
 export const isThemeId = (v: unknown): v is ThemeId => THEMES.some((t) => t.id === v);
 

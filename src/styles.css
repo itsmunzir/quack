@@ -11,8 +11,11 @@
  * a swatch preview a theme other than the active one.
  */
 @theme inline {
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono Variable", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --font-sans:
+    "Inter Variable", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-mono:
+    "JetBrains Mono Variable", ui-monospace, "Cascadia Code", Consolas,
+    monospace;
 
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -23,6 +26,7 @@
   --color-text: var(--text);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
   --color-accent-fg: var(--accent-fg);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
@@ -30,6 +34,7 @@
 
   --radius-box: var(--r-box);
   --radius-btn: var(--r-btn);
+  --radius-sm: var(--r-sm);
 }
 
 /* ─── Modes ─────────────────────────────────────────────────────────────── */
@@ -42,26 +47,29 @@
   --base-line: #e4e4df;
   --base-line-strong: #d0d0ca;
   --text: #121211;
-  --muted: #74746e;
-  --ok: #2f9e5b;
-  --warn: #c27c0e;
-  --err: #d6453d;
-  --m-get: #2f9e5b;
-  --m-post: #3b6fd8;
-  --m-put: #c27c0e;
-  --m-patch: #8a55d6;
-  --m-delete: #d6453d;
-  --m-other: #74746e;
+  /* Every text colour here reads at 4.5:1 or better on the surfaces it sits on (WCAG AA). */
+  --muted: #64645e;
+  --ok: #1a6e3c;
+  --warn: #965a00;
+  --err: #b8322a;
+  --m-get: #1a6e3c;
+  --m-post: #2856c2;
+  --m-put: #965a00;
+  --m-patch: #6f3fc0;
+  --m-delete: #b8322a;
+  --m-other: #64645e;
   --wash: 5%;
   --wash-surface: 2%;
   --tint: 24%;
   --scrim: rgb(0 0 0 / 0.08);
 
+  /*
+   * Corners: cards and menus use --r-box, anything you click uses --r-btn, small inline bits --r-sm.
+   * A group that pads its controls adds that padding to their radius, so the curves stay parallel.
+   */
   --r-box: 12px;
-  --r-btn: 999px;
-  --label-case: none;
-  --label-track: 0;
-  --label-font: var(--font-sans);
+  --r-btn: 8px;
+  --r-sm: 6px;
 }
 
 [data-mode="dark"] {
@@ -72,16 +80,16 @@
   --base-line: #2e2e33;
   --base-line-strong: #3d3d43;
   --text: #e3e1dc;
-  --muted: #8d8c91;
+  --muted: #9a999e;
   --ok: #5cc58a;
   --warn: #e5b04f;
-  --err: #f07167;
+  --err: #f47c72;
   --m-get: #5cc58a;
   --m-post: #7aa2ff;
   --m-put: #e5b04f;
   --m-patch: #b493f5;
-  --m-delete: #f07167;
-  --m-other: #8e8d92;
+  --m-delete: #f47c72;
+  --m-other: #9a999e;
   --wash: 5%;
   --wash-surface: 7%;
   --tint: 18%;
@@ -110,27 +118,49 @@
   --accent: var(--text);
   --accent-fg: var(--base-bg);
   --tint: 8%;
-  --r-box: 4px;
-  --r-btn: 4px;
-  --label-case: uppercase;
-  --label-track: 0.06em;
-  --label-font: var(--font-mono);
+}
+
+/* With no colour of its own, Ink shows the light greys' warmth, so it gets neutral ones. */
+:root[data-theme="ink"]:not([data-mode="dark"]) {
+  --base-bg: #f6f6f7;
+  --base-surface: #ffffff;
+  --base-raised: #efeff1;
+  --base-line: #e4e4e7;
+  --base-line-strong: #d1d1d6;
+  --text: #111113;
+  --muted: #5f5f68;
+  --m-other: #5f5f68;
 }
 
 :root,
 [data-theme] {
   --bg: color-mix(in oklab, var(--accent) var(--wash), var(--base-bg));
-  --surface: color-mix(in oklab, var(--accent) var(--wash-surface), var(--base-surface));
+  --surface: color-mix(
+    in oklab,
+    var(--accent) var(--wash-surface),
+    var(--base-surface)
+  );
   --raised: color-mix(in oklab, var(--accent) var(--wash), var(--base-raised));
-  --line: color-mix(in oklab, var(--accent) calc(var(--wash) * 1.4), var(--base-line));
-  --line-strong: color-mix(in oklab, var(--accent) calc(var(--wash) * 1.4), var(--base-line-strong));
+  --line: color-mix(
+    in oklab,
+    var(--accent) calc(var(--wash) * 1.4),
+    var(--base-line)
+  );
+  --line-strong: color-mix(
+    in oklab,
+    var(--accent) calc(var(--wash) * 1.4),
+    var(--base-line-strong)
+  );
   /* The fill of whatever is picked: a row, a pin, a tab. White in light, a lifted accent grey in dark. */
   --selected: var(--surface);
+  /* The accent for small marks: dots, icons, focus rings. Deepened in light mode so pale accents still show. */
+  --accent-strong: color-mix(in oklab, var(--accent) 55%, var(--text));
 }
 
 [data-mode="dark"],
 [data-mode="dark"] [data-theme] {
   --selected: color-mix(in oklab, var(--accent) 14%, var(--base-raised));
+  --accent-strong: var(--accent);
 }
 
 /* Registered as colours so switching spaces (and so themes) cross-fades the glow. */
@@ -169,6 +199,8 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   font-feature-settings: "cv11", "ss01";
+  /* Timings, sizes and counts change in place; equal-width digits keep them from jittering. */
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   transition:
     background-color 200ms ease,
@@ -181,7 +213,7 @@ body {
 
 /* Focus ring for controls; text inputs draw their own focus state. */
 :where(button, a, [tabindex]):focus-visible {
-  outline: 2px solid color-mix(in oklab, var(--accent) 60%, transparent);
+  outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
 }
 
@@ -190,49 +222,50 @@ body {
   scrollbar-color: var(--line-strong) transparent;
 }
 
-/* The small UI voice: labels, tabs, chips, buttons. A theme can make it technical. */
-.label,
-.voice,
-.chip,
-.send-btn {
-  font-family: var(--label-font);
-  text-transform: var(--label-case);
-  letter-spacing: var(--label-track);
-}
 .label {
   font-size: 11px;
   font-weight: 600;
   color: var(--muted);
 }
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 16px;
-  border-radius: var(--r-btn);
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  user-select: none;
-  transition:
-    background-color var(--dur) var(--ease),
-    color var(--dur) var(--ease);
-}
-.btn-ghost {
-  color: var(--muted);
-}
-.btn-ghost:hover,
-.btn-ghost[aria-expanded="true"] {
-  background: var(--raised);
-  color: var(--text);
-}
-.btn-icon {
-  width: 32px;
-  height: 32px;
-  padding: 0;
+/* Layered, so utilities like size-7 or px-2.5 on a button win over these defaults. */
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 16px;
+    border-radius: var(--r-btn);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    user-select: none;
+    transition:
+      background-color var(--dur) var(--ease),
+      color var(--dur) var(--ease),
+      transform 160ms var(--ease);
+  }
+  /* Pressing gives way a little, so a click always feels heard. */
+  .btn:active:not(:disabled),
+  .send-btn:active:not(:disabled),
+  .press:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .btn-ghost {
+    color: var(--muted);
+  }
+  .btn-ghost:hover,
+  .btn-ghost[aria-expanded="true"] {
+    background: var(--raised);
+    color: var(--text);
+  }
+  .btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
 }
 
 .kbd {
@@ -305,7 +338,12 @@ body {
 
 .shimmer {
   display: block;
-  background: linear-gradient(90deg, var(--raised) 0%, color-mix(in oklab, var(--raised), var(--text) 4%) 50%, var(--raised) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--raised) 0%,
+    color-mix(in oklab, var(--raised), var(--text) 4%) 50%,
+    var(--raised) 100%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.6s linear infinite;
 }
@@ -365,7 +403,11 @@ body {
 }
 /* A checkerboard behind images, so transparent pixels read as transparent. */
 .checker {
-  background: repeating-conic-gradient(color-mix(in oklab, var(--text) 8%, transparent) 0 25%, transparent 0 50%) 0 0 / 16px 16px;
+  background: repeating-conic-gradient(
+      color-mix(in oklab, var(--text) 8%, transparent) 0 25%,
+      transparent 0 50%
+    )
+    0 0 / 16px 16px;
 }
 
 .chip {
@@ -374,15 +416,15 @@ body {
   gap: 6px;
   height: 22px;
   padding: 0 9px;
-  border-radius: var(--r-btn);
+  border-radius: var(--r-sm);
   animation: fade 200ms var(--ease) both;
 }
 
 /* ═══ Command bar ══════════════════════════════════════════════════════════ */
 
+/* No entrance: the command bar is opened from the keyboard many times a day, and should just be there. */
 .palette-backdrop {
   background: var(--scrim);
-  animation: fade 150ms var(--ease) both;
 }
 .palette {
   border-radius: calc(var(--r-box) + 4px);
@@ -392,7 +434,6 @@ body {
     0 0 0 0.5px color-mix(in oklab, var(--text) 18%, transparent),
     0 24px 60px -16px rgb(0 0 0 / 0.28),
     0 4px 12px -4px rgb(0 0 0 / 0.08);
-  animation: drop 180ms var(--ease) both;
 }
 .palette-list {
   scrollbar-width: none;
@@ -408,9 +449,21 @@ body {
 
 .canvas {
   background:
-    radial-gradient(110% 80% at 0% 0%, color-mix(in oklab, var(--sa) var(--tint), transparent) 0%, transparent 60%),
-    radial-gradient(90% 90% at 100% 100%, color-mix(in oklab, var(--sb) var(--tint), transparent) 0%, transparent 65%),
-    linear-gradient(140deg, color-mix(in oklab, var(--sa) calc(var(--tint) * 0.6), var(--bg)), color-mix(in oklab, var(--sb) calc(var(--tint) * 0.6), var(--bg)));
+    radial-gradient(
+      110% 80% at 0% 0%,
+      color-mix(in oklab, var(--sa) var(--tint), transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      90% 90% at 100% 100%,
+      color-mix(in oklab, var(--sb) var(--tint), transparent) 0%,
+      transparent 65%
+    ),
+    linear-gradient(
+      140deg,
+      color-mix(in oklab, var(--sa) calc(var(--tint) * 0.6), var(--bg)),
+      color-mix(in oklab, var(--sb) calc(var(--tint) * 0.6), var(--bg))
+    );
 }
 [data-glow="off"] .canvas {
   background: var(--bg);
@@ -418,7 +471,8 @@ body {
 
 .glass {
   background: color-mix(in oklab, var(--surface) 46%, transparent);
-  box-shadow: inset 0 0 0 0.5px color-mix(in oklab, var(--text) 10%, transparent);
+  box-shadow: inset 0 0 0 0.5px
+    color-mix(in oklab, var(--text) 10%, transparent);
   transition: background-color var(--dur) var(--ease);
 }
 .glass:hover {
@@ -456,7 +510,7 @@ body {
 
 .urlbar {
   padding: 3px;
-  border-radius: var(--r-box);
+  border-radius: calc(var(--r-btn) + 3px);
   background: var(--raised);
   box-shadow: inset 0 0 0 0.5px var(--line);
   transition: box-shadow var(--dur) var(--ease);
@@ -474,17 +528,22 @@ body {
   min-width: 72px;
   height: 32px;
   padding: 0 16px;
-  border-radius: calc(var(--r-box) - 3px);
+  border-radius: var(--r-btn);
   color: var(--accent-fg);
   font-size: 13px;
   font-weight: 600;
-  background: linear-gradient(180deg, color-mix(in oklab, var(--sa) 92%, #fff), var(--sa));
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--sa) 92%, #fff),
+    var(--sa)
+  );
   box-shadow:
     inset 0 0.5px 0 rgb(255 255 255 / 0.3),
     0 0 0 0.5px color-mix(in oklab, var(--sa) 70%, #000);
   transition:
     filter var(--dur) var(--ease),
-    opacity var(--dur) var(--ease);
+    opacity var(--dur) var(--ease),
+    transform 160ms var(--ease);
 }
 .send-btn:hover {
   filter: brightness(1.06);

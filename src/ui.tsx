@@ -102,7 +102,7 @@ export function CopyButton({ label, text, icon = ICONS.copy, compact }: { label:
       onClick={() => navigator.clipboard.writeText(text()).then(() => setDone(true))}
       title={compact ? (done ? "Copied" : `Copy as ${label}`) : undefined}
       aria-label={compact ? `Copy as ${label}` : undefined}
-      className={`btn btn-ghost voice shrink-0 text-xs ${compact ? "btn-icon size-7" : "h-7 gap-1.5 px-2.5"}`}
+      className={`btn btn-ghost shrink-0 text-xs ${compact ? "btn-icon size-7" : "h-7 gap-1.5 px-2.5"}`}
     >
       <Icon d={done ? ICONS.check : icon} className="size-3.5" />
       {!compact && (done ? "Copied" : label)}
@@ -144,7 +144,7 @@ function CopyAsCode({ req, vars }: { req: Req; vars: Header[] }) {
           {LANGS.map((l) => (
             <MenuItem key={l.id} onClick={() => void navigator.clipboard.writeText(reqCode(l.id, req, vars)).then(() => setDone(l.id))}>
               <span className="flex-1 text-[13px]">{l.name}</span>
-              {done === l.id ? <Icon d={ICONS.check} className="size-3.5 text-accent" /> : <span className="text-[11.5px] text-muted">{l.detail}</span>}
+              {done === l.id ? <Icon d={ICONS.check} className="size-3.5 text-accent-strong" /> : <span className="text-[11.5px] text-muted">{l.detail}</span>}
             </MenuItem>
           ))}
         </Menu>
@@ -167,7 +167,7 @@ export function MethodBadge({ method }: { method: string }) {
 export function Menu({ children, align = "left", width = "w-36" }: { children: ReactNode; align?: "left" | "right"; width?: string }) {
   return (
     <div
-      className={`pop absolute top-full z-30 mt-1.5 ${width} ${align === "right" ? "right-0" : "left-0"} rounded-box border border-line bg-surface p-1 text-text shadow-[0_16px_40px_-10px_rgb(0_0_0/0.3)]`}
+      className={`pop absolute top-full z-30 mt-1.5 ${width} ${align === "right" ? "right-0 origin-top-right" : "left-0 origin-top-left"} rounded-box border border-line bg-surface p-1 text-text shadow-[0_16px_40px_-10px_rgb(0_0_0/0.3)]`}
       role="menu"
     >
       {children}
@@ -182,7 +182,7 @@ export function MenuItem({ active, onClick, children }: { active?: boolean; onCl
       role="menuitemradio"
       aria-checked={active}
       onClick={onClick}
-      className={`flex h-8 w-full items-center gap-2.5 rounded-[calc(var(--r-box)-4px)] px-2.5 text-left transition-colors ${active ? "bg-raised" : "hover:bg-raised"}`}
+      className={`flex h-8 w-full items-center gap-2.5 rounded-btn px-2.5 text-left transition-colors ${active ? "bg-raised" : "hover:bg-raised"}`}
     >
       {children}
     </button>
@@ -197,7 +197,7 @@ export function SpaceDot({ theme, className = "size-2.5" }: { theme: ThemeId; cl
 /** A row of mutually exclusive options, like a small segmented switch. */
 function Segmented<T extends string>({ label, options, value, onChange }: { label: string; options: readonly { id: T; name: string }[]; value: T; onChange: (id: T) => void }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex rounded-[calc(var(--r-box)-4px)] bg-raised p-0.5">
+    <div role="radiogroup" aria-label={label} className="flex rounded-[calc(var(--r-btn)+2px)] bg-raised p-0.5">
       {options.map((o) => (
         <button
           key={o.id}
@@ -205,7 +205,7 @@ function Segmented<T extends string>({ label, options, value, onChange }: { labe
           role="radio"
           aria-checked={o.id === value}
           onClick={() => onChange(o.id)}
-          className={`voice h-7 flex-1 rounded-[calc(var(--r-box)-6px)] text-[12px] font-medium transition-colors ${o.id === value ? "bg-selected text-text shadow-sm" : "text-muted hover:text-text"}`}
+          className={`h-7 flex-1 rounded-btn text-[12px] font-medium transition-colors ${o.id === value ? "bg-selected text-text shadow-sm" : "text-muted hover:text-text"}`}
         >
           {o.name}
         </button>
@@ -267,7 +267,7 @@ export function ThemePicker({
               role="switch"
               aria-checked={glow}
               onClick={() => onGlow(!glow)}
-              className="flex h-8 w-full items-center justify-between rounded-[calc(var(--r-box)-4px)] px-1.5 text-left text-[13px] transition-colors hover:bg-raised"
+              className="flex h-8 w-full items-center justify-between rounded-btn px-1.5 text-left text-[13px] transition-colors hover:bg-raised"
             >
               Glow
               <span className={`relative h-[18px] w-8 rounded-full transition-colors ${glow ? "bg-accent" : "bg-line-strong"}`}>
@@ -346,7 +346,7 @@ function Tabs<T extends string>({ value, onChange, options }: { value: T; onChan
   }, [value, options.map((o) => o[2]).join()]);
 
   return (
-    <div ref={wrap} className="relative flex w-max gap-0.5 rounded-btn bg-raised p-0.5" role="tablist">
+    <div ref={wrap} className="relative flex w-max gap-0.5 rounded-[calc(var(--r-btn)+2px)] bg-raised p-0.5" role="tablist">
       {thumb && (
         <span
           className="absolute top-0.5 bottom-0.5 rounded-btn bg-selected shadow-[0_1px_2px_rgb(0_0_0/0.12),0_0_0_1px_var(--line)] transition-[left,width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
@@ -360,10 +360,10 @@ function Tabs<T extends string>({ value, onChange, options }: { value: T; onChan
           role="tab"
           aria-selected={id === value}
           onClick={() => onChange(id)}
-          className={`voice relative z-10 flex h-7 shrink-0 items-center gap-1.5 rounded-btn px-2.5 text-xs font-medium transition-colors ${id === value ? "text-text" : "text-muted hover:text-text"}`}
+          className={`relative z-10 flex h-7 shrink-0 items-center gap-1.5 rounded-btn px-2.5 text-xs font-medium transition-colors ${id === value ? "text-text" : "text-muted hover:text-text"}`}
         >
           {label}
-          {count === true ? <span className="size-1.5 rounded-full bg-accent" /> : count ? <span className="font-mono text-[10px] text-muted">{count}</span> : null}
+          {count === true ? <span className="size-1.5 rounded-full bg-accent-strong" /> : count ? <span className="font-mono text-[10px] text-muted">{count}</span> : null}
         </button>
       ))}
     </div>
@@ -382,7 +382,7 @@ function MethodPicker({ value, onChange }: { value: string; onChange: (m: string
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-8 items-center gap-1.5 rounded-[calc(var(--r-box)-4px)] px-3 font-mono text-[12.5px] font-semibold transition-[filter,background-color] duration-150 active:brightness-95"
+        className="press flex h-8 items-center gap-1.5 rounded-btn px-3 font-mono text-[12.5px] font-semibold transition-[filter,background-color] duration-150 active:brightness-95"
         style={{ color: c, background: `color-mix(in oklab, ${c} 13%, transparent)` }}
       >
         {value}
@@ -450,7 +450,7 @@ export function UrlBar({
           }}
           placeholder="Paste a URL or a cURL command"
           spellCheck={false}
-          className="min-w-0 flex-1 bg-transparent px-3 font-mono text-[13px] text-text outline-none placeholder:text-muted/70"
+          className="min-w-0 flex-1 bg-transparent px-3 font-mono text-[13px] text-text outline-none placeholder:text-muted/90"
         />
         {sending ? (
           <button type="button" onClick={onCancel} className="send-btn stop gap-2" title="Cancel (Ctrl Enter)">
@@ -471,7 +471,7 @@ export function UrlBar({
 /** Bearer, Basic or API key, folded into the request when it is sent. */
 function AuthEditor({ auth, onChange }: { auth?: Auth; onChange: (a: Auth | undefined) => void }) {
   const field =
-    "h-8 min-w-0 flex-1 rounded-[6px] bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/60 hover:bg-raised/70 focus:bg-raised";
+    "h-8 min-w-0 flex-1 rounded-sm bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/90 hover:bg-raised/70 focus:bg-raised";
   const row = (label: string, input: ReactNode) => (
     <label className="flex items-center gap-2 border-b border-line py-0.5">
       <span className="w-24 shrink-0 px-2 text-[12.5px] text-muted">{label}</span>
@@ -557,7 +557,7 @@ export function KVEditor({
   const isSecret = (k: string) => !!secrets?.includes(k.trim());
   const toggle = (k: string) => onSecrets?.(isSecret(k) ? secrets!.filter((n) => n !== k.trim()) : [...(secrets ?? []), k.trim()]);
   const field =
-    "h-8 rounded-[6px] bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/60 hover:bg-raised/70 focus:bg-raised";
+    "h-8 rounded-sm bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/90 hover:bg-raised/70 focus:bg-raised";
   return (
     <div className="flex flex-col">
       {rows.map(([k, v], i) => (
@@ -576,7 +576,7 @@ export function KVEditor({
               type="button"
               onClick={() => toggle(k)}
               aria-pressed={isSecret(k)}
-              className={`btn btn-ghost btn-icon size-7 ${isSecret(k) ? "!text-accent" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"}`}
+              className={`btn btn-ghost btn-icon size-7 ${isSecret(k) ? "!text-accent-strong" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"}`}
               title={isSecret(k) ? "Secret: kept out of shared folders" : "Mark as secret"}
               aria-label={`${isSecret(k) ? "Unmark" : "Mark"} ${k} as secret`}
             >
@@ -596,7 +596,7 @@ export function KVEditor({
       <button
         type="button"
         onClick={() => onChange([...rows, ["", ""]])}
-        className="mt-1.5 self-start rounded-[6px] px-2 py-1 text-[12.5px] text-muted transition-colors hover:bg-raised hover:text-text"
+        className="mt-1.5 self-start rounded-sm px-2 py-1 text-[12.5px] text-muted transition-colors hover:bg-raised hover:text-text"
       >
         + Add {keyLabel.toLowerCase()}
       </button>
@@ -645,7 +645,7 @@ export function RequestEditor({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0 overflow-x-auto [scrollbar-width:none]">
+        <div className="flex min-w-0 overflow-x-auto [scrollbar-width:none]!">
         <Tabs
           value={tab}
           onChange={setTab}
@@ -685,7 +685,7 @@ function CaptureEditor({ captures, envName, result, onChange }: { captures: Capt
   const add = () => onChange([...captures, { name: "", from: "body", path: "" }]);
   const preview = useMemo(() => (result ? extract(result, captures.map((c) => ({ ...c, name: c.name || "_" }))) : []), [result, captures]);
   const field =
-    "h-8 rounded-[6px] bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/60 hover:bg-raised/70 focus:bg-raised";
+    "h-8 rounded-sm bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/90 hover:bg-raised/70 focus:bg-raised";
 
   if (!captures.length)
     return (
@@ -694,7 +694,7 @@ function CaptureEditor({ captures, envName, result, onChange }: { captures: Capt
         <p className="max-w-80 text-xs text-muted">
           Save part of this response, like a login token, as a variable. Other requests use it as <code className="font-mono text-text">{"{{token}}"}</code>.
         </p>
-        <button type="button" onClick={add} className="btn btn-ghost voice h-7 px-3 text-xs">
+        <button type="button" onClick={add} className="btn btn-ghost h-7 px-3 text-xs">
           + Add capture
         </button>
       </div>
@@ -712,7 +712,7 @@ function CaptureEditor({ captures, envName, result, onChange }: { captures: Capt
                 type="button"
                 onClick={() => set(i, { from: c.from === "body" ? "header" : "body" })}
                 title={`Reading the response ${c.from}. Click to read a ${c.from === "body" ? "header" : "body path"} instead.`}
-                className="voice h-6 w-[60px] shrink-0 rounded-btn bg-raised text-[11px] font-medium text-muted transition-colors hover:bg-text/10 hover:text-text"
+                className="h-6 w-[60px] shrink-0 rounded-btn bg-raised text-[11px] font-medium text-muted transition-colors hover:bg-text/10 hover:text-text"
               >
                 {CAPTURE_FROM.find((f) => f.id === c.from)!.name}
               </button>
@@ -741,7 +741,7 @@ function CaptureEditor({ captures, envName, result, onChange }: { captures: Capt
           </div>
         );
       })}
-      <button type="button" onClick={add} className="mt-1.5 self-start rounded-[6px] px-2 py-1 text-[12.5px] text-muted transition-colors hover:bg-raised hover:text-text">
+      <button type="button" onClick={add} className="mt-1.5 self-start rounded-sm px-2 py-1 text-[12.5px] text-muted transition-colors hover:bg-raised hover:text-text">
         + Add capture
       </button>
       <p className="mt-3 px-2 text-[12px] text-muted">
@@ -800,7 +800,7 @@ function FieldsEditor({ fields, files, onChange }: { fields: FormField[]; files:
     else set(i, { ...fields[i], value: path, file: true });
   };
   const field =
-    "h-8 rounded-[6px] bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/60 hover:bg-raised/70 focus:bg-raised";
+    "h-8 rounded-sm bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/90 hover:bg-raised/70 focus:bg-raised";
   return (
     <div className="flex flex-col">
       {fields.map((f, i) => {
@@ -813,7 +813,7 @@ function FieldsEditor({ fields, files, onChange }: { fields: FormField[]; files:
                 type="button"
                 onClick={() => chooseFile(i)}
                 title={f.value}
-                className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-[6px] px-2 text-left font-mono text-[12.5px] text-text transition-colors hover:bg-raised/70"
+                className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-sm px-2 text-left font-mono text-[12.5px] text-text transition-colors hover:bg-raised/70"
               >
                 <Icon d={ICONS.clip} className="size-3.5 shrink-0 text-muted" />
                 <span className="truncate">{f.value ? fileName(f.value) : "Choose a file…"}</span>
@@ -825,7 +825,7 @@ function FieldsEditor({ fields, files, onChange }: { fields: FormField[]; files:
               <button
                 type="button"
                 onClick={() => (isFile ? set(i, { ...f, value: "", file: undefined }) : chooseFile(i))}
-                className="btn btn-ghost voice h-7 px-2 text-[11px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                className="btn btn-ghost h-7 px-2 text-[11px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
                 title={isFile ? "Use text instead" : "Attach a file"}
               >
                 {isFile ? "Text" : "File"}
@@ -843,11 +843,11 @@ function FieldsEditor({ fields, files, onChange }: { fields: FormField[]; files:
         );
       })}
       <div className="mt-1.5 flex gap-1">
-        <button type="button" onClick={() => onChange([...fields, { name: "", value: "" }])} className="rounded-[6px] px-2 py-1 text-[12.5px] text-muted transition-colors hover:bg-raised hover:text-text">
+        <button type="button" onClick={() => onChange([...fields, { name: "", value: "" }])} className="rounded-sm px-2 py-1 text-[12.5px] text-muted transition-colors hover:bg-raised hover:text-text">
           + Add field
         </button>
         {files && isTauri && (
-          <button type="button" onClick={() => chooseFile(null)} className="rounded-[6px] px-2 py-1 text-[12.5px] text-muted transition-colors hover:bg-raised hover:text-text">
+          <button type="button" onClick={() => chooseFile(null)} className="rounded-sm px-2 py-1 text-[12.5px] text-muted transition-colors hover:bg-raised hover:text-text">
             + Add file
           </button>
         )}
@@ -948,7 +948,7 @@ export function InlineEdit({ value, placeholder, onDone, className = "" }: { val
         e.stopPropagation();
       }}
       onClick={(e) => e.stopPropagation()}
-      className={`min-w-0 rounded-[4px] bg-surface px-1 text-text outline-none ring-1 ring-accent ${className}`}
+      className={`min-w-0 rounded-sm bg-surface px-1 text-text outline-none ring-1 ring-accent-strong ${className}`}
     />
   );
 }

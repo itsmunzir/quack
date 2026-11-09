@@ -180,7 +180,7 @@ export function BodyView({ text, image }: { text: string; image?: string }) {
   if (image)
     return (
       <div className="enter flex h-full min-h-40 items-center justify-center p-4">
-        <img src={image} alt="Response image" className="checker max-h-full max-w-full rounded-[6px] object-contain shadow-[0_0_0_1px_var(--line)]" />
+        <img src={image} alt="Response image" className="checker max-h-full max-w-full rounded-sm object-contain shadow-[0_0_0_1px_var(--line)]" />
       </div>
     );
 
@@ -194,7 +194,7 @@ export function BodyView({ text, image }: { text: string; image?: string }) {
     const isFolded = folded.has(i) && l.end !== undefined;
     rows.push(
       <div key={i} className="line flex">
-        <span className="flex shrink-0 items-start justify-end gap-0.5 pr-2 text-muted/45 select-none" style={{ width: `${gutter + 3}ch` }}>
+        <span className="flex shrink-0 items-start justify-end gap-0.5 pr-2 text-muted/75 select-none" style={{ width: `calc(${gutter}ch + 2rem)` }}>
           {i + 1}
           {l.end !== undefined ? (
             <button type="button" onClick={() => toggle(i)} className="fold" aria-label={isFolded ? "Unfold" : "Fold"} aria-expanded={!isFolded}>
@@ -236,10 +236,10 @@ export function BodyView({ text, image }: { text: string; image?: string }) {
           placeholder={parsed.ok && !raw ? "Search, or $.path to filter" : "Search"}
           spellCheck={false}
           aria-label="Search the response"
-          className="h-7 min-w-0 flex-1 bg-transparent font-mono text-[12.5px] outline-none placeholder:font-sans placeholder:text-muted/70"
+          className="h-7 min-w-0 flex-1 bg-transparent font-mono text-[12.5px] outline-none placeholder:font-sans placeholder:text-muted/90"
         />
         {copied ? (
-          <span className="voice truncate text-[11.5px] text-muted">
+          <span className="truncate text-[11.5px] text-muted">
             Copied <code className="font-mono text-text">{copied}</code>
           </span>
         ) : query && !isPath ? (
@@ -256,12 +256,12 @@ export function BodyView({ text, image }: { text: string; image?: string }) {
           <span className="shrink-0 text-[11.5px] text-muted">Nothing at that path</span>
         ) : null}
         {parsed.ok && (
-          <button type="button" onClick={() => setRaw((r) => !r)} aria-pressed={raw} className={`voice h-6 shrink-0 rounded-btn px-2 text-[11px] font-medium transition-colors ${raw ? "bg-selected text-text shadow-[0_0_0_1px_var(--line)]" : "text-muted hover:bg-raised hover:text-text"}`}>
+          <button type="button" onClick={() => setRaw((r) => !r)} aria-pressed={raw} className={`h-6 shrink-0 rounded-btn px-2 text-[11px] font-medium transition-colors ${raw ? "bg-selected text-text shadow-[0_0_0_1px_var(--line)]" : "text-muted hover:bg-raised hover:text-text"}`}>
             Raw
           </button>
         )}
       </div>
-      <div ref={scroller} className="json min-h-0 flex-1 overflow-auto py-2 pr-3 font-mono text-[13px] leading-relaxed">
+      <div ref={scroller} className="json min-h-0 flex-1 overflow-auto py-2 pr-3 pl-1 font-mono text-[13px] leading-relaxed">
         {rows}
       </div>
     </div>

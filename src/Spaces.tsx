@@ -53,7 +53,7 @@ export function Spaces({
           <span className="pointer-events-none text-[13px] font-semibold tracking-tight">Quack</span>
         </div>
 
-        <button type="button" onClick={openPalette} className="glass flex h-9 items-center gap-2 rounded-box px-3 text-[13px] text-muted">
+        <button type="button" onClick={openPalette} className="glass press flex h-9 items-center gap-2 rounded-btn px-3 text-[13px] text-muted">
           <Icon d={ICONS.search} />
           Search or run…
           <span className="kbd ml-auto bg-text/6">Ctrl K</span>
@@ -186,7 +186,7 @@ function ReqRow({ r, space }: { r: Req; space: Space }) {
   const [renaming, setRenaming] = useState(false);
   const hover = "opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100";
   return (
-    <div className={`req-row group flex h-9 shrink-0 items-center gap-1 rounded-[calc(var(--r-box)-2px)] pr-1.5 text-[13px] ${r.id === ws.req.id ? "on" : ""}`}>
+    <div className={`req-row group flex h-9 shrink-0 items-center gap-1 rounded-btn pr-1.5 text-[13px] ${r.id === ws.req.id ? "on" : ""}`}>
       {renaming ? (
         <div className="flex min-w-0 flex-1 items-center gap-2.5 pl-2.5">
           <MethodBadge method={r.method} />
@@ -220,7 +220,7 @@ function ReqRow({ r, space }: { r: Req; space: Space }) {
 
 function RowButton({ label, icon, filled, className, onClick }: { label: string; icon: string; filled?: boolean; className: string; onClick: () => void }) {
   return (
-    <button type="button" aria-label={label} title={label} onClick={onClick} className={`grid size-6 shrink-0 place-items-center rounded-[6px] text-muted hover:bg-text/8 hover:text-text ${className}`}>
+    <button type="button" aria-label={label} title={label} onClick={onClick} className={`grid size-6 shrink-0 place-items-center rounded-sm text-muted hover:bg-text/8 hover:text-text ${className}`}>
       <Icon d={icon} className="size-3" filled={filled} />
     </button>
   );
@@ -239,7 +239,7 @@ function Pins() {
           type="button"
           title={`${reqTitle(r)} · ${s.name}`}
           onClick={() => ws.selectReq(s.id, r.id)}
-          className={`pin glass flex h-11 min-w-0 flex-col justify-center gap-px rounded-box px-2.5 text-left ${r.id === ws.req.id ? "on" : ""}`}
+          className={`pin glass press flex h-11 min-w-0 flex-col justify-center gap-px rounded-btn px-2.5 text-left ${r.id === ws.req.id ? "on" : ""}`}
         >
           <span className="font-mono text-[9.5px] font-semibold" style={{ color: methodColor(r.method) }}>
             {methodShort(r.method)}
@@ -300,7 +300,7 @@ function SpaceMenu({ onRename }: { onRename: () => void }) {
         aria-expanded={open}
         onClick={() => (open ? close() : setOpen(true))}
         onDoubleClick={onRename}
-        className="voice flex max-w-full items-center gap-1.5 rounded-[6px] px-1.5 py-0.5 text-[12px] font-semibold text-muted transition-colors hover:bg-text/6 hover:text-text"
+        className="flex max-w-full items-center gap-1.5 rounded-sm px-1.5 py-0.5 text-[12px] font-semibold text-muted transition-colors hover:bg-text/6 hover:text-text"
       >
         <SpaceDot theme={ws.space.theme} />
         <span className="truncate">{ws.space.name}</span>

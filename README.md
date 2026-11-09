@@ -128,7 +128,7 @@ Leaving is just as easy: export any space, back up everything in one file, or co
 - History per space: every send with its response, one click to see it again
 
 **Looks**
-- Four themes, Honey, Sage, Periwinkle and Ink, each in light and dark or following your system
+- Four themes, Ink (the default), Honey, Sage and Periwinkle, each in light and dark or following your system
 - An optional accent glow, because why not
 
 **Light on your machine**

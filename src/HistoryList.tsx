@@ -28,7 +28,7 @@ export function HistoryList() {
               type="button"
               onClick={() => ws.openHistory(h)}
               title={h.req.url}
-              className="req-row flex h-9 shrink-0 items-center gap-2.5 rounded-[calc(var(--r-box)-2px)] px-2.5 text-left text-[13px]"
+              className="req-row flex h-9 shrink-0 items-center gap-2.5 rounded-btn px-2.5 text-left text-[13px]"
             >
               <MethodBadge method={h.req.method} />
               <span className="min-w-0 flex-1 truncate">{reqTitle(h.req)}</span>
@@ -44,7 +44,7 @@ export function HistoryList() {
         type="button"
         onClick={() => (confirmClear ? (ws.clearHistory(ws.space.id), setConfirmClear(false)) : setConfirmClear(true))}
         onBlur={() => setConfirmClear(false)}
-        className={`mt-2 self-start rounded-[6px] px-2 py-1 text-[12px] transition-colors hover:bg-raised ${confirmClear ? "text-err" : "text-muted hover:text-text"}`}
+        className={`mt-2 self-start rounded-sm px-2 py-1 text-[12px] transition-colors hover:bg-raised ${confirmClear ? "text-err" : "text-muted hover:text-text"}`}
       >
         {confirmClear ? "Click again to clear" : "Clear history"}
       </button>
