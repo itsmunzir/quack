@@ -4,7 +4,8 @@ import { isTauri, type Header, type SendResult } from "./api";
 import { BODYLESS, METHODS, parseParams, withParams, type Outcome, type Req } from "./store";
 import { MODES, THEMES, type Mode, type ThemeId } from "./themes";
 import { Duck } from "./Duck";
-import { isCurl, parseCurl, toCurl } from "./curl";
+import { isCurl, parseCurl } from "./curl";
+import { LANGS, toCode, type Lang } from "./codegen";
 import { hasVars, prepare, resolve } from "./env";
 import { AUTH_TYPES, blankAuth, type Auth } from "./auth";
 import { BODY_TYPES, type FormField } from "./body";
@@ -77,6 +78,7 @@ export const ICONS = {
   copy: "M5.5 5.5V3a1 1 0 0 1 1-1H13a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1h-2.5M3 5.5h6.5a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1z",
   check: "M3.5 8.5l3 3 6-7",
   terminal: "M2.5 4l3.5 4-3.5 4M8 12.5h5.5",
+  code: "M5.5 4.5L2 8l3.5 3.5M10.5 4.5L14 8l-3.5 3.5M9 3l-2 10",
   clock: "M8 14.5A6.5 6.5 0 1 0 8 1.5a6.5 6.5 0 0 0 0 13zM8 4.5V8l2.5 1.5",
   download: "M8 2.5v8M4.5 7.5L8 11l3.5-3.5M3 13.5h10",
   clip: "M10.5 5L6 9.5a1.4 1.4 0 0 0 2 2l5-5a2.8 2.8 0 0 0-4-4L4 7.5a4.2 4.2 0 0 0 6 6l3.5-3.5",
@@ -108,8 +110,48 @@ export function CopyButton({ label, text, icon = ICONS.copy, compact }: { label:
   );
 }
 
-/** The request as a cURL command with variables filled in; the body is left out for methods that can't carry one. */
-export const reqCurl = (r: Req, vars: Header[]) => toCurl(prepare(r, vars), !BODYLESS.has(r.method));
+/** The request as code, with variables filled in; the body is left out for methods that can't carry one. */
+export const reqCode = (lang: Lang, r: Req, vars: Header[]) => toCode(lang, prepare(r, vars), !BODYLESS.has(r.method));
+
+/** Copies the request as cURL, fetch, Python, Go or HTTPie. */
+function CopyAsCode({ req, vars }: { req: Req; vars: Header[] }) {
+  const [open, setOpen] = useState(false);
+  const [done, setDone] = useState<Lang | null>(null);
+  const ref = useClickOutside<HTMLDivElement>(() => setOpen(false));
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(() => {
+      setDone(null);
+      setOpen(false);
+    }, 700);
+    return () => clearTimeout(t);
+  }, [done]);
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        title="Copy as code"
+        aria-label="Copy as code"
+        className="btn btn-ghost btn-icon size-7"
+      >
+        <Icon d={ICONS.code} className="size-3.5" />
+      </button>
+      {open && (
+        <Menu align="right" width="w-52">
+          <div className="label px-2.5 pt-1.5 pb-1">Copy as</div>
+          {LANGS.map((l) => (
+            <MenuItem key={l.id} onClick={() => void navigator.clipboard.writeText(reqCode(l.id, req, vars)).then(() => setDone(l.id))}>
+              <span className="flex-1 text-[13px]">{l.name}</span>
+              {done === l.id ? <Icon d={ICONS.check} className="size-3.5 text-accent" /> : <span className="text-[11.5px] text-muted">{l.detail}</span>}
+            </MenuItem>
+          ))}
+        </Menu>
+      )}
+    </div>
+  );
+}
 
 /** A request's method as a small tinted tag. */
 export function MethodBadge({ method }: { method: string }) {
@@ -616,7 +658,7 @@ export function RequestEditor({
           ]}
         />
         </div>
-        <CopyButton label="cURL" compact icon={ICONS.terminal} text={() => reqCurl(req, vars)} />
+        <CopyAsCode req={req} vars={vars} />
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {tab === "params" ? (

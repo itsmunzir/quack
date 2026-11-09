@@ -97,7 +97,7 @@ Bring your work with you. Open the space menu and choose **Import collection…*
 - **cURL**. Paste a command into the URL bar and it turns into a request, headers, auth and all.
 - **Quack backups** from another machine.
 
-Leaving is just as easy: export any space, back up everything in one file, or copy any request as cURL.
+Leaving is just as easy: export any space, back up everything in one file, or copy any request as code.
 
 ## Everything you need, nothing you don't
 
@@ -105,6 +105,8 @@ Leaving is just as easy: export any space, back up everything in one file, or co
 - GET to OPTIONS, with query params edited as rows and kept in sync with the URL
 - Bodies as raw text, URL-encoded forms, or multipart with file uploads
 - Cancel a slow request mid-flight
+- Copy any request as cURL, JavaScript `fetch`, Python `requests`, Go `net/http` or HTTPie, with variables
+  filled in, JSON bodies written as real objects and file uploads included
 - JSON responses highlighted, with headers, status, timing and size at a glance
 - Fold any object or array, search the body (`Ctrl+F`), or type `$.data.items[0]` to see just that part
 - Click a key to copy its path, ready for a capture; switch to Raw for the exact text

@@ -129,7 +129,7 @@ export function parseCurl(cmd: string): Parsed | null {
   return { method, url, headers, body, auth };
 }
 
-const sh = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
+export const sh = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
 /** The request as a copy-pasteable bash `curl` command. */
 export function toCurl(r: Parsed & { multipart?: FormPart[] }, sendBody: boolean): string {

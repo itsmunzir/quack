@@ -3,7 +3,8 @@ import { MAX_SPACES, reqTitle, useWorkspace } from "./store";
 import { MODES, THEMES, type Mode } from "./themes";
 import { backupAll, exportSpace, importFile } from "./files";
 import { folderName, openFolder, saveToFolder, unlinkFolder } from "./sync";
-import { Icon, ICONS, methodColor, methodShort, reqCurl, SpaceDot } from "./ui";
+import { Icon, ICONS, methodColor, methodShort, reqCode, SpaceDot } from "./ui";
+import { LANGS } from "./codegen";
 
 interface Item {
   id: string;
@@ -59,7 +60,14 @@ export function Palette({ open, onClose, onMode, onToggleGlow }: { open: boolean
     out.push(
       { id: "new-req", group: "Actions", label: "New request", icon: <Icon d={ICONS.plus} />, hint: "Ctrl N", run: () => ws.addReq() },
       { id: "dup-req", group: "Actions", label: "Duplicate request", detail: reqTitle(ws.req), icon: <Icon d={ICONS.copy} />, hint: "Ctrl D", run: () => ws.duplicateReq(ws.req.id) },
-      { id: "curl", group: "Actions", label: "Copy as cURL", detail: reqTitle(ws.req), icon: <Icon d={ICONS.terminal} />, run: () => void navigator.clipboard.writeText(reqCurl(ws.req, ws.vars)) },
+      ...LANGS.map((l) => ({
+        id: `code-${l.id}`,
+        group: "Actions",
+        label: `Copy as ${l.name}`,
+        detail: l.id === "curl" ? reqTitle(ws.req) : l.detail,
+        icon: <Icon d={l.id === "curl" || l.id === "httpie" ? ICONS.terminal : ICONS.code} />,
+        run: () => void navigator.clipboard.writeText(reqCode(l.id, ws.req, ws.vars)),
+      })),
       { id: "del-req", group: "Actions", label: "Delete request", detail: reqTitle(ws.req), icon: <Icon d={ICONS.x} />, run: () => ws.deleteReq(ws.req.id) },
       ...(ws.spaces.length < MAX_SPACES ? [{ id: "new-space", group: "Actions", label: "New space", icon: <Icon d={ICONS.plus} />, run: () => ws.addSpace() }] : []),
     );
