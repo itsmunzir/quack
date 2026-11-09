@@ -1,4 +1,5 @@
 mod engine;
+pub mod folder;
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -144,7 +145,10 @@ pub fn run() {
             send_request,
             cancel_request,
             read_text_file,
-            write_text_file
+            write_text_file,
+            folder::create_folder,
+            folder::read_folder,
+            folder::write_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running Quack");

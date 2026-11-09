@@ -79,6 +79,8 @@ export const ICONS = {
   download: "M8 2.5v8M4.5 7.5L8 11l3.5-3.5M3 13.5h10",
   clip: "M10.5 5L6 9.5a1.4 1.4 0 0 0 2 2l5-5a2.8 2.8 0 0 0-4-4L4 7.5a4.2 4.2 0 0 0 6 6l3.5-3.5",
   braces: "M5.5 2.5c-1.4 0-2 .6-2 2V6c0 1.1-.6 2-1.5 2 .9 0 1.5.9 1.5 2v1.5c0 1.4.6 2 2 2M10.5 2.5c1.4 0 2 .6 2 2V6c0 1.1.6 2 1.5 2-.9 0-1.5.9-1.5 2v1.5c0 1.4-.6 2-2 2",
+  folder: "M2 4.5a1 1 0 0 1 1-1h3.2l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z",
+  lock: "M4.5 7.5V5.5a3.5 3.5 0 0 1 7 0v2M3.5 7.5h9v6h-9z",
   palette: "M8 14.5A6.5 6.5 0 1 1 14.5 8c0 1.5-1.2 2.3-2.5 2.3h-1.3a1.2 1.2 0 0 0-.8 2.1c.5.6.1 2.1-1.9 2.1zM4.8 7.5h0M6.8 4.8h0M10 4.8h0",
 };
 
@@ -482,8 +484,28 @@ function Resolved({ url, vars }: { url: string; vars: Header[] }) {
   );
 }
 
-export function KVEditor({ rows, onChange, keyLabel }: { rows: Header[]; onChange: (r: Header[]) => void; keyLabel: string }) {
-  const set = (i: number, h: Header) => onChange(rows.map((x, j) => (j === i ? h : x)));
+/** Editable name/value rows. With `secrets`, each row can be marked secret: masked here, and kept out of a shared folder. */
+export function KVEditor({
+  rows,
+  onChange,
+  keyLabel,
+  secrets,
+  onSecrets,
+}: {
+  rows: Header[];
+  onChange: (r: Header[]) => void;
+  keyLabel: string;
+  secrets?: string[];
+  onSecrets?: (names: string[]) => void;
+}) {
+  const set = (i: number, h: Header) => {
+    const old = rows[i][0].trim();
+    // A secret stays secret when it's renamed.
+    if (secrets && onSecrets && old !== h[0].trim() && secrets.includes(old)) onSecrets(secrets.map((n) => (n === old ? h[0].trim() : n)));
+    onChange(rows.map((x, j) => (j === i ? h : x)));
+  };
+  const isSecret = (k: string) => !!secrets?.includes(k.trim());
+  const toggle = (k: string) => onSecrets?.(isSecret(k) ? secrets!.filter((n) => n !== k.trim()) : [...(secrets ?? []), k.trim()]);
   const field =
     "h-8 rounded-[6px] bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/60 hover:bg-raised/70 focus:bg-raised";
   return (
@@ -491,7 +513,26 @@ export function KVEditor({ rows, onChange, keyLabel }: { rows: Header[]; onChang
       {rows.map(([k, v], i) => (
         <div key={i} className="group flex items-center gap-2 border-b border-line py-0.5">
           <input value={k} onChange={(e) => set(i, [e.target.value, v])} placeholder={keyLabel} spellCheck={false} className={`${field} w-2/5 text-text`} />
-          <input value={v} onChange={(e) => set(i, [k, e.target.value])} placeholder="Value" spellCheck={false} className={`${field} min-w-0 flex-1 text-muted focus:text-text`} />
+          <input
+            value={v}
+            onChange={(e) => set(i, [k, e.target.value])}
+            type={isSecret(k) ? "password" : "text"}
+            placeholder="Value"
+            spellCheck={false}
+            className={`${field} min-w-0 flex-1 text-muted focus:text-text`}
+          />
+          {onSecrets && k.trim() && (
+            <button
+              type="button"
+              onClick={() => toggle(k)}
+              aria-pressed={isSecret(k)}
+              className={`btn btn-ghost btn-icon size-7 ${isSecret(k) ? "!text-accent" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"}`}
+              title={isSecret(k) ? "Secret: kept out of shared folders" : "Mark as secret"}
+              aria-label={`${isSecret(k) ? "Unmark" : "Mark"} ${k} as secret`}
+            >
+              <Icon d={ICONS.lock} />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onChange(rows.filter((_, j) => j !== i))}

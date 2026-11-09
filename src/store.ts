@@ -24,6 +24,8 @@ export interface Env {
   id: string;
   name: string;
   vars: Header[];
+  /** Names of variables whose values stay out of a shared folder. */
+  secrets?: string[];
 }
 
 /** A collection of requests. Each space wears its own theme and has its own environments. */
@@ -34,6 +36,8 @@ export interface Space {
   requests: Req[];
   envs: Env[];
   envId: string | null;
+  /** The folder this space is kept in sync with, if any. */
+  folder?: string;
 }
 
 export interface Outcome {
@@ -111,7 +115,7 @@ const isHeader = (h: unknown): h is Header => Array.isArray(h) && h.length === 2
 
 function isEnv(e: unknown): e is Env {
   const o = e as Env;
-  return !!o && isStr(o.id) && isStr(o.name) && Array.isArray(o.vars) && o.vars.every(isHeader);
+  return !!o && isStr(o.id) && isStr(o.name) && Array.isArray(o.vars) && o.vars.every(isHeader) && (o.secrets === undefined || (Array.isArray(o.secrets) && o.secrets.every(isStr)));
 }
 
 function isReq(r: unknown): r is Req {
@@ -141,6 +145,7 @@ export function cleanSpaces(list: unknown): Space[] {
         requests: requests.length ? requests : [newReq()],
         envs,
         envId: envs.some((e) => e.id === sp.envId) ? sp.envId : null,
+        ...(isStr(sp.folder) && sp.folder ? { folder: sp.folder } : {}),
       };
     });
 }
@@ -262,10 +267,25 @@ export function useWorkspaceState() {
           const requests = sp.requests.map((r) => ({ ...r, id: uid() }));
           const envs = sp.envs.map((e) => ({ ...e, id: uid() }));
           const active = sp.envs.findIndex((e) => e.id === sp.envId);
-          return { ...sp, id: uid(), requests, envs, envId: active >= 0 ? envs[active].id : null };
+          // A copy never takes over another space's folder.
+          return { ...sp, id: uid(), requests, envs, envId: active >= 0 ? envs[active].id : null, folder: undefined };
         });
         if (added.length) setSaved((cur) => ({ spaces: [...cur.spaces, ...added], spaceId: added[0].id, reqId: added[0].requests[0].id }));
         return added.length;
+      },
+      /** Adds a space as it is, ids included, and opens it. Returns false when there's no room. */
+      openSpace(sp: Space): boolean {
+        if (savedRef.current.spaces.length >= MAX_SPACES) return false;
+        setSaved((cur) => ({ spaces: [...cur.spaces, sp], spaceId: sp.id, reqId: sp.requests[0].id }));
+        return true;
+      },
+      /** Swaps in a space's contents, as read back from its folder. */
+      replaceSpace(id: string, next: Space) {
+        mapSpace(id, () => next);
+      },
+      /** Starts or stops keeping a space in sync with a folder. */
+      setFolder(id: string, folder: string | undefined) {
+        mapSpace(id, ({ folder: _, ...s }) => (folder ? { ...s, folder } : s));
       },
       /** A short message shown at the bottom of the window for a few seconds. */
       notify(text: string) {

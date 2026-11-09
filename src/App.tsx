@@ -4,9 +4,11 @@ import { applyGlow, applyMode, applyTheme, loadGlow, loadMode, nextTheme, onSyst
 import { ThemePicker } from "./ui";
 import { Palette } from "./Palette";
 import { Spaces } from "./Spaces";
+import { useFolderSync } from "./sync";
 
 export default function App() {
   const ws = useWorkspaceState();
+  useFolderSync(ws);
   const [mode, setMode] = useState(loadMode);
   const [glow, setGlow] = useState(loadGlow);
   const [palette, setPalette] = useState(false);

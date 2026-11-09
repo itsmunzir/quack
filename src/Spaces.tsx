@@ -23,6 +23,7 @@ import appIcon from "./assets/icon.svg";
 import { EnvPicker } from "./Envs";
 import { HistoryList } from "./HistoryList";
 import { exportSpace, importFile } from "./files";
+import { folderName, openFolder, saveToFolder, unlinkFolder } from "./sync";
 
 /**
  * The window: a canvas that glows in the space's theme accent, a sidebar of
@@ -319,6 +320,7 @@ function SpaceMenu({ onRename }: { onRename: () => void }) {
             >
               <SpaceDot theme={s.theme} />
               <span className="flex-1 truncate text-[13px]">{s.name}</span>
+              {s.folder && <Icon d={ICONS.folder} className="size-3 shrink-0 text-muted" />}
               <span className="kbd kbd-quiet">Ctrl {i + 1}</span>
             </MenuItem>
           ))}
@@ -343,7 +345,39 @@ function SpaceMenu({ onRename }: { onRename: () => void }) {
               <span className="flex-1 text-[13px]">Import collection…</span>
             </MenuItem>
           )}
+          {!full && (
+            <MenuItem
+              onClick={() => {
+                close();
+                void openFolder(ws);
+              }}
+            >
+              <Icon d={ICONS.folder} className="size-3 text-muted" />
+              <span className="flex-1 text-[13px]">Open folder…</span>
+            </MenuItem>
+          )}
           <div className="my-1 border-t border-line" />
+          {ws.space.folder ? (
+            <MenuItem
+              onClick={() => {
+                close();
+                unlinkFolder(ws, ws.space);
+              }}
+            >
+              <span className="flex-1 truncate text-[13px]" title={ws.space.folder}>
+                Stop syncing <span className="text-muted">{folderName(ws.space)}</span>
+              </span>
+            </MenuItem>
+          ) : (
+            <MenuItem
+              onClick={() => {
+                close();
+                void saveToFolder(ws);
+              }}
+            >
+              <span className="flex-1 text-[13px]">Save to folder…</span>
+            </MenuItem>
+          )}
           <MenuItem
             onClick={() => {
               close();

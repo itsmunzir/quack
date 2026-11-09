@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MAX_SPACES, reqTitle, useWorkspace } from "./store";
 import { MODES, THEMES, type Mode } from "./themes";
 import { backupAll, exportSpace, importFile } from "./files";
+import { folderName, openFolder, saveToFolder, unlinkFolder } from "./sync";
 import { Icon, ICONS, methodColor, methodShort, reqCurl, SpaceDot } from "./ui";
 
 interface Item {
@@ -68,6 +69,10 @@ export function Palette({ open, onClose, onMode, onToggleGlow }: { open: boolean
     out.push(
       ...(ws.spaces.length < MAX_SPACES ? [{ id: "import", group: "Actions", label: "Import collection…", detail: "Postman, OpenAPI or Quack backup", icon: <Icon d={ICONS.download} />, run: () => void importFile(ws) }] : []),
       { id: "export-space", group: "Actions", label: "Export space…", detail: ws.space.name, icon: <Icon d={ICONS.download} />, run: () => void exportSpace(ws, ws.space) },
+      ws.space.folder
+        ? { id: "unlink-folder", group: "Actions", label: "Stop syncing with folder", detail: folderName(ws.space), icon: <Icon d={ICONS.folder} />, run: () => unlinkFolder(ws, ws.space) }
+        : { id: "save-folder", group: "Actions", label: "Save space to folder…", detail: "Plain files you can commit", icon: <Icon d={ICONS.folder} />, run: () => void saveToFolder(ws) },
+      ...(ws.spaces.length < MAX_SPACES ? [{ id: "open-folder", group: "Actions", label: "Open folder…", detail: "A space saved as files", icon: <Icon d={ICONS.folder} />, run: () => void openFolder(ws) }] : []),
       { id: "backup", group: "Actions", label: "Back up all spaces…", icon: <Icon d={ICONS.download} />, run: () => void backupAll(ws) },
     );
     out.push({ id: "env-new", group: "Actions", label: "New environment", icon: <Icon d={ICONS.plus} />, run: () => ws.addEnv() });

@@ -59,7 +59,13 @@ export function EnvPicker() {
                   {confirmDelete ? "Click again to delete" : "Delete"}
                 </button>
               </div>
-              <KVEditor rows={env.vars} onChange={(vars) => ws.updateEnv(env.id, { vars })} keyLabel="Variable" />
+              <KVEditor
+                rows={env.vars}
+                onChange={(vars) => ws.updateEnv(env.id, { vars })}
+                keyLabel="Variable"
+                secrets={env.secrets ?? []}
+                onSecrets={(secrets) => ws.updateEnv(env.id, { secrets })}
+              />
             </div>
           ) : (
             <p className="border-t border-line px-3.5 py-3 text-[12.5px] text-muted">
