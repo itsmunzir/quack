@@ -1,0 +1,49 @@
+name: Bug report
+description: Something in Quack isn't working the way it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Please leave out tokens, passwords and private URLs: issues are public.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a POST request to https://httpbin.org/post
+        2. Set the body to …
+        3. Press Send
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Quack version
+      placeholder: 0.1.3
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version
+      placeholder: Windows 11 24H2, macOS 15.4, Ubuntu 24.04
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, a cURL command that reproduces it, or the response you got.
