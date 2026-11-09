@@ -3,19 +3,19 @@ import { isTauri } from "./api";
 import { importText, toBackup } from "./importers";
 import { MAX_SPACES, type Space, type Workspace } from "./store";
 
-const IMPORT_FILTERS = [{ name: "Collections and specs", extensions: ["json", "yaml", "yml"] }];
+const IMPORT_FILTERS = [{ name: "Collections, specs and .http files", extensions: ["json", "yaml", "yml", "http", "rest"] }];
 const EXPORT_FILTERS = [{ name: "JSON", extensions: ["json"] }];
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const baseName = (path: string) => path.split(/[\\/]/).pop() || path;
 
-/** Asks for a Postman, OpenAPI or Quack file and adds what it holds as new spaces. */
+/** Asks for a Postman, OpenAPI, .http or Quack file and adds what it holds as new spaces. */
 export async function importFile(ws: Workspace) {
   if (!isTauri) return ws.notify("Importing needs the desktop app.");
   const { open } = await import("@tauri-apps/plugin-dialog");
   const path = await open({ multiple: false, directory: false, filters: IMPORT_FILTERS });
   if (typeof path !== "string") return;
   try {
-    const { kind, spaces } = importText(await invoke<string>("read_text_file", { path }));
+    const { kind, spaces } = importText(await invoke<string>("read_text_file", { path }), baseName(path));
     const added = ws.importSpaces(spaces);
     if (!added) return ws.notify(`No room for another space. Quack holds up to ${MAX_SPACES}.`);
     if (added < spaces.length) return ws.notify(`Imported ${added} of ${spaces.length} spaces. Quack holds up to ${MAX_SPACES}.`);

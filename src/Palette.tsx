@@ -75,7 +75,7 @@ export function Palette({ open, onClose, onMode, onToggleGlow }: { open: boolean
       out.push({ id: `env-${e.id}`, group: "Environments", label: e.name || "Untitled", detail: e.id === ws.env?.id ? "active" : `${e.vars.filter(([k]) => k.trim()).length} variables`, icon: <Icon d={ICONS.braces} />, run: () => ws.selectEnv(e.id) });
     if (ws.env) out.push({ id: "env-none", group: "Environments", label: "No environment", icon: <Icon d={ICONS.braces} />, run: () => ws.selectEnv(null) });
     out.push(
-      ...(ws.spaces.length < MAX_SPACES ? [{ id: "import", group: "Actions", label: "Import collection…", detail: "Postman, OpenAPI or Quack backup", icon: <Icon d={ICONS.download} />, run: () => void importFile(ws) }] : []),
+      ...(ws.spaces.length < MAX_SPACES ? [{ id: "import", group: "Actions", label: "Import collection…", detail: "Postman, OpenAPI, .http or Quack backup", icon: <Icon d={ICONS.download} />, run: () => void importFile(ws) }] : []),
       { id: "export-space", group: "Actions", label: "Export space…", detail: ws.space.name, icon: <Icon d={ICONS.download} />, run: () => void exportSpace(ws, ws.space) },
       ws.space.folder
         ? { id: "unlink-folder", group: "Actions", label: "Stop syncing with folder", detail: folderName(ws.space), icon: <Icon d={ICONS.folder} />, run: () => unlinkFolder(ws, ws.space) }

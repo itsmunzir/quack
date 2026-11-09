@@ -3,6 +3,7 @@ import type { Header } from "./api";
 import type { Auth } from "./auth";
 import type { BodyType, FormField } from "./body";
 import type { Capture } from "./capture";
+import { looksLikeHttpFile, parseHttpFile } from "./httpfile";
 import { cleanSpaces, newReq, uid, type Env, type Req, type Space } from "./store";
 import { DEFAULT_THEME } from "./themes";
 
@@ -14,12 +15,27 @@ export function toBackup(spaces: Space[]): string {
 }
 
 export interface Imported {
-  kind: "Quack backup" | "Postman collection" | "OpenAPI spec";
+  kind: "Quack backup" | "Postman collection" | "OpenAPI spec" | ".http file";
   spaces: Space[];
 }
 
-/** Reads a Quack backup, Postman collection or OpenAPI/Swagger spec (JSON or YAML). Throws a readable error otherwise. */
-export function importText(text: string): Imported {
+/**
+ * Reads a Quack backup, Postman collection or OpenAPI/Swagger spec (JSON or YAML), or a `.http` file.
+ * `fileName` names a `.http` file's space. Throws a readable error for anything else.
+ */
+export function importText(text: string, fileName = ""): Imported {
+  const httpFile = (): Imported => {
+    const { requests, vars } = parseHttpFile(text);
+    if (!requests.length) throw new Error("There are no requests in that file.");
+    return { kind: ".http file", spaces: [space(fileName.replace(/\.(http|rest)$/i, "") || "HTTP requests", requests, vars)] };
+  };
+  if (/\.(http|rest)$/i.test(fileName)) return httpFile();
+  // Otherwise a .http file is only guessed at once the text isn't a collection, so a spec that
+  // mentions `GET /users` in a description is never mistaken for one.
+  const notACollection = (message: string) => {
+    if (looksLikeHttpFile(text)) return httpFile();
+    throw new Error(message);
+  };
   let doc: Record<string, unknown>;
   try {
     // JSON is valid YAML, but the JSON parser is faster and stricter, so try it first.
@@ -29,10 +45,10 @@ export function importText(text: string): Imported {
       // The core schema builds plain data only: no custom types, and dates stay as written.
       doc = yaml.load(text, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
     } catch {
-      throw new Error("That file isn't valid JSON or YAML.");
+      return notACollection("That file isn't valid JSON or YAML.");
     }
   }
-  if (!doc || typeof doc !== "object") throw new Error("That file isn't a collection Quack knows.");
+  if (!doc || typeof doc !== "object") return notACollection("That file isn't a collection Quack knows.");
   if (doc.format === BACKUP_FORMAT) {
     const spaces = cleanSpaces(doc.spaces);
     if (!spaces.length) throw new Error("That backup has no spaces in it.");
@@ -41,7 +57,7 @@ export function importText(text: string): Imported {
   const info = doc.info as { schema?: string } | undefined;
   if (typeof info?.schema === "string" && info.schema.includes("getpostman.com")) return { kind: "Postman collection", spaces: [postman(doc as unknown as PmCollection)] };
   if (typeof doc.openapi === "string" || typeof doc.swagger === "string") return { kind: "OpenAPI spec", spaces: [openapi(doc as unknown as OasDoc)] };
-  throw new Error("That file isn't a Postman collection, OpenAPI spec or Quack backup.");
+  return notACollection("That file isn't a Postman collection, OpenAPI spec, .http file or Quack backup.");
 }
 
 const space = (name: string, requests: Req[], vars: Header[]): Space => {

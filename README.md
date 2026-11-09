@@ -94,6 +94,8 @@ Bring your work with you. Open the space menu and choose **Import collection…*
   Test scripts that save a response value, like `pm.environment.set("token", pm.response.json().token)`, become captures.
 - **OpenAPI 3** and **Swagger 2** specs. Every endpoint becomes a request, the server becomes `{{baseUrl}}`,
   path params become variables and example bodies are filled in.
+- **`.http` files** from VS Code REST Client or JetBrains. File variables become an environment, and
+  response references like `{{login.response.body.$.token}}` become captures, so chains keep working.
 - **cURL**. Paste a command into the URL bar and it turns into a request, headers, auth and all.
 - **Quack backups** from another machine.
 
