@@ -3,7 +3,8 @@ import { isTauri } from "./api";
 import { importText, toBackup } from "./importers";
 import { MAX_SPACES, type Space, type Workspace } from "./store";
 
-const FILTERS = [{ name: "JSON", extensions: ["json"] }];
+const IMPORT_FILTERS = [{ name: "Collections and specs", extensions: ["json", "yaml", "yml"] }];
+const EXPORT_FILTERS = [{ name: "JSON", extensions: ["json"] }];
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const baseName = (path: string) => path.split(/[\\/]/).pop() || path;
 
@@ -11,7 +12,7 @@ const baseName = (path: string) => path.split(/[\\/]/).pop() || path;
 export async function importFile(ws: Workspace) {
   if (!isTauri) return ws.notify("Importing needs the desktop app.");
   const { open } = await import("@tauri-apps/plugin-dialog");
-  const path = await open({ multiple: false, directory: false, filters: FILTERS });
+  const path = await open({ multiple: false, directory: false, filters: IMPORT_FILTERS });
   if (typeof path !== "string") return;
   try {
     const { kind, spaces } = importText(await invoke<string>("read_text_file", { path }));
@@ -29,7 +30,7 @@ export async function importFile(ws: Workspace) {
 export async function exportSpaces(ws: Workspace, spaces: Space[], suggestedName: string) {
   if (!isTauri) return ws.notify("Exporting needs the desktop app.");
   const { save } = await import("@tauri-apps/plugin-dialog");
-  const path = await save({ defaultPath: suggestedName, filters: FILTERS });
+  const path = await save({ defaultPath: suggestedName, filters: EXPORT_FILTERS });
   if (!path) return;
   try {
     await invoke("write_text_file", { path, contents: toBackup(spaces) });

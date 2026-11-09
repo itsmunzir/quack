@@ -1,3 +1,4 @@
+import yaml from "js-yaml";
 import type { Header } from "./api";
 import type { Auth } from "./auth";
 import type { BodyType, FormField } from "./body";
@@ -16,13 +17,19 @@ export interface Imported {
   spaces: Space[];
 }
 
-/** Reads a Quack backup, Postman collection or OpenAPI/Swagger spec (JSON). Throws a readable error otherwise. */
+/** Reads a Quack backup, Postman collection or OpenAPI/Swagger spec (JSON or YAML). Throws a readable error otherwise. */
 export function importText(text: string): Imported {
   let doc: Record<string, unknown>;
   try {
+    // JSON is valid YAML, but the JSON parser is faster and stricter, so try it first.
     doc = JSON.parse(text);
   } catch {
-    throw new Error(/^\s*(openapi|swagger)\s*:/m.test(text) ? "YAML specs aren't supported yet. Export the spec as JSON and import that." : "That file isn't valid JSON.");
+    try {
+      // The core schema builds plain data only: no custom types, and dates stay as written.
+      doc = yaml.load(text, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+    } catch {
+      throw new Error("That file isn't valid JSON or YAML.");
+    }
   }
   if (!doc || typeof doc !== "object") throw new Error("That file isn't a collection Quack knows.");
   if (doc.format === BACKUP_FORMAT) {
