@@ -36,7 +36,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
-  <img alt="Quack showing a GET request with query params on the left and a highlighted JSON response on the right" src="docs/screenshot-light.png">
+  <img alt="Quack in its Ink theme, showing a GET request with query params on the left and a highlighted JSON response with line numbers on the right" src="docs/screenshot-light.png">
 </picture>
 
 <br>
@@ -134,6 +134,16 @@ Leaving is just as easy: export any space, back up everything in one file, or co
 **Light on your machine**
 - A native app built on Tauri and Rust, not Electron
 - The Windows installer is about 3 MB
+
+## Every space dresses differently
+
+Give each space its own theme and you'll never fire a request at production thinking it was staging.
+Ink is the default. Honey, Sage and Periwinkle are one click away, and every theme comes in light and dark.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/themes-dark.png">
+  <img alt="Four Quack windows stacked, one per theme: Periwinkle, Sage, Honey and Ink" src="docs/themes-light.png">
+</picture>
 
 ## Keyboard first
 
