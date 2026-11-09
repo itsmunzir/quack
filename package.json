@@ -1,7 +1,7 @@
 {
   "name": "quack",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A fast, open source, offline API client for Windows, macOS and Linux. No account, no cloud, no telemetry.",
   "keywords": ["api-client", "http-client", "rest-client", "postman-alternative", "insomnia-alternative", "offline", "local-first", "privacy", "git", "openapi", "tauri"],
   "license": "MIT",

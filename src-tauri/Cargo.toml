@@ -1,6 +1,6 @@
 [package]
 name = "quack"
-version = "0.1.1"
+version = "0.1.2"
 description = "Quack, a fast, open source, offline API client. No account, no cloud, no telemetry."
 edition.workspace = true
 license.workspace = true
