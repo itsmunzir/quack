@@ -29,6 +29,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "DeveloperTool",
+    "shortDescription": "Offline, open source API client",
+    "longDescription": "Quack is a fast, open source API client. Send HTTP requests and read the responses, keep collections as plain files in git, and import Postman collections, OpenAPI specs and cURL commands. No account, no cloud, no telemetry.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
