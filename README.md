@@ -36,7 +36,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
-  <img alt="Quack in its Ink theme, showing a GET request with query params on the left and a highlighted JSON response with line numbers on the right" src="docs/screenshot-light.png">
+  <img alt="Quack in its Ink theme, light and dark side by side, showing a GET request with query params and a highlighted JSON response" src="docs/screenshot-light.png">
 </picture>
 
 <br>
