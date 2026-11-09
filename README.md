@@ -34,10 +34,10 @@
 
 <br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
-  <img alt="Quack in its Ink theme, light and dark side by side, showing a GET request with query params and a highlighted JSON response" src="docs/screenshot-light.png">
-</picture>
+<p align="center">
+  <a href="docs/screenshot-light.png"><img width="49%" alt="Quack in its Ink theme, light mode, showing a GET request with query params and a highlighted JSON response" src="docs/screenshot-light.png"></a>
+  <a href="docs/screenshot-dark.png"><img width="49%" alt="Quack in its Ink theme, dark mode, showing the same request and response" src="docs/screenshot-dark.png"></a>
+</p>
 
 <br>
 
