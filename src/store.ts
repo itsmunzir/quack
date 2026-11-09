@@ -4,6 +4,7 @@ import { DEFAULT_THEME, isThemeId, type ThemeId } from "./themes";
 import { prepare } from "./env";
 import { isAuth, type Auth } from "./auth";
 import { isBodyType, isField, type BodyType, type FormField } from "./body";
+import { extract, isCapture, setVars, type Capture } from "./capture";
 import { loadHistory, MAX_HISTORY, saveHistory, type HistoryEntry } from "./history";
 
 export interface Req {
@@ -16,6 +17,8 @@ export interface Req {
   bodyType?: BodyType;
   form?: FormField[];
   auth?: Auth;
+  /** Values saved from a successful response into the active environment. */
+  captures?: Capture[];
   pinned?: boolean;
 }
 
@@ -135,6 +138,7 @@ export function cleanSpaces(list: unknown): Space[] {
           auth: isAuth(r.auth) ? r.auth : undefined,
           bodyType: isBodyType(r.bodyType) ? r.bodyType : undefined,
           form: Array.isArray(r.form) ? r.form.filter(isField) : undefined,
+          captures: Array.isArray(r.captures) ? r.captures.filter(isCapture) : undefined,
         }),
       );
       const envs = Array.isArray(sp.envs) ? sp.envs.filter(isEnv) : [];
@@ -372,11 +376,39 @@ export function useWorkspaceState() {
       });
       setOutcomes((o) => ({ ...o, [r.id]: { sending: false, result, seq } }));
       record({ result });
+      if (r.captures?.length && result.status >= 200 && result.status < 300) capture(result);
     } catch (e) {
       // A cancel puts back whatever was showing before; it isn't history.
       if (String(e) === CANCELLED) return setOutcomes((o) => ({ ...o, [r.id]: { ...o[r.id], sending: false } }));
       setOutcomes((o) => ({ ...o, [r.id]: { sending: false, error: String(e), seq } }));
       record({ error: String(e) });
+    }
+
+    /** Saves the request's captures into the space's active environment, making one if there's none. */
+    function capture(result: SendResult) {
+      const found = extract(result, r.captures ?? []);
+      const values = found.flatMap((f) => (f.value === undefined ? [] : [{ name: f.capture.name.trim(), value: f.value }]));
+      const missing = found.filter((f) => f.value === undefined).map((f) => f.capture.name.trim());
+      const notFound = missing.length ? `Couldn't find ${list(missing)} in the response.` : "";
+      const sp = savedRef.current.spaces.find((s) => s.id === space.id);
+      if (!sp || !values.length) return notFound && actions.notify(notFound);
+
+      let { envs, envId } = sp;
+      let made = false;
+      if (!envs.some((e) => e.id === envId)) {
+        envId = uid();
+        envs = [...envs, { id: envId, name: "Default", vars: [] }];
+        made = true;
+      }
+      envs = envs.map((e) => {
+        if (e.id !== envId) return e;
+        const next = setVars(e.vars, values);
+        // New captured values are usually tokens, and change on every send: keep them out of shared folders.
+        return { ...e, vars: next.vars, ...(next.added.length ? { secrets: [...(e.secrets ?? []), ...next.added] } : {}) };
+      });
+      setSaved((st) => ({ ...st, spaces: st.spaces.map((s) => (s.id === sp.id ? { ...s, envs, envId } : s)) }));
+      const env = envs.find((e) => e.id === envId)!;
+      actions.notify(`Set ${list(values.map((v) => v.name))} in ${made ? "a new environment, " : ""}${env.name}.${notFound && " " + notFound}`);
     }
 
     function record(reply: Pick<HistoryEntry, "result" | "error">) {
@@ -398,6 +430,9 @@ export function useWorkspace(): Workspace {
   if (!ws) throw new Error("useWorkspace must be used inside WorkspaceContext");
   return ws;
 }
+
+/** "a", "a and b", "a, b and c". */
+const list = (names: string[]) => (names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`);
 
 /* ─── Query params ⇄ URL ────────────────────────────────────────────────── */
 

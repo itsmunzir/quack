@@ -2,6 +2,7 @@ import yaml from "js-yaml";
 import type { Header } from "./api";
 import { isAuth, type Auth } from "./auth";
 import { isBodyType, isField, type FormField } from "./body";
+import { isCapture } from "./capture";
 import { newReq, reqTitle, uid, type Env, type Req, type Space } from "./store";
 import { DEFAULT_THEME, isThemeId } from "./themes";
 
@@ -76,6 +77,8 @@ export function toFiles(sp: Space): Files {
         (local.auth ??= {})[rStems[i]] = secret;
       } else doc.auth = r.auth;
     }
+    const captures = (r.captures ?? []).filter((c) => c.name.trim());
+    if (captures.length) doc.captures = captures.map(({ name, from, path }) => ({ name, from, path }));
     if (r.pinned) doc.pinned = true;
     files[`requests/${rStems[i]}.yaml`] = dump(doc);
   });
@@ -173,6 +176,12 @@ export function fromFiles(files: Files, prev?: Space): Space {
       bodyType: isBodyType(d.bodyType) ? d.bodyType : undefined,
       form: form.length ? form : undefined,
       auth,
+      captures: (() => {
+        const list2 = list(d.captures)
+          .map((c) => ({ name: str(obj(c).name), from: str(obj(c).from, "body"), path: str(obj(c).path) }))
+          .filter(isCapture);
+        return list2.length ? list2 : undefined;
+      })(),
       pinned: d.pinned === true || d.pinned === "true" || undefined,
     });
   });

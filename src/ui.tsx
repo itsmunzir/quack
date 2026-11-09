@@ -8,6 +8,7 @@ import { isCurl, parseCurl, toCurl } from "./curl";
 import { hasVars, prepare, resolve } from "./env";
 import { AUTH_TYPES, blankAuth, type Auth } from "./auth";
 import { BODY_TYPES, type FormField } from "./body";
+import { CAPTURE_FROM, extract, type Capture } from "./capture";
 
 /* ─── Small helpers ─────────────────────────────────────────────────────── */
 
@@ -85,7 +86,7 @@ export const ICONS = {
 };
 
 /** Copies to the clipboard and briefly confirms it. */
-export function CopyButton({ label, text, icon = ICONS.copy }: { label: string; text: () => string; icon?: string }) {
+export function CopyButton({ label, text, icon = ICONS.copy, compact }: { label: string; text: () => string; icon?: string; compact?: boolean }) {
   const [done, setDone] = useState(false);
   useEffect(() => {
     if (!done) return;
@@ -93,9 +94,15 @@ export function CopyButton({ label, text, icon = ICONS.copy }: { label: string; 
     return () => clearTimeout(t);
   }, [done]);
   return (
-    <button type="button" onClick={() => navigator.clipboard.writeText(text()).then(() => setDone(true))} className="btn btn-ghost voice h-7 gap-1.5 px-2.5 text-xs">
+    <button
+      type="button"
+      onClick={() => navigator.clipboard.writeText(text()).then(() => setDone(true))}
+      title={compact ? (done ? "Copied" : `Copy as ${label}`) : undefined}
+      aria-label={compact ? `Copy as ${label}` : undefined}
+      className={`btn btn-ghost voice shrink-0 text-xs ${compact ? "btn-icon size-7" : "h-7 gap-1.5 px-2.5"}`}
+    >
       <Icon d={done ? ICONS.check : icon} className="size-3.5" />
-      {done ? "Copied" : label}
+      {!compact && (done ? "Copied" : label)}
     </button>
   );
 }
@@ -296,7 +303,7 @@ function Tabs<T extends string>({ value, onChange, options }: { value: T; onChan
   }, [value, options.map((o) => o[2]).join()]);
 
   return (
-    <div ref={wrap} className="relative flex gap-0.5 rounded-btn bg-raised p-0.5" role="tablist">
+    <div ref={wrap} className="relative flex w-max gap-0.5 rounded-btn bg-raised p-0.5" role="tablist">
       {thumb && (
         <span
           className="absolute top-0.5 bottom-0.5 rounded-btn bg-selected shadow-[0_1px_2px_rgb(0_0_0/0.12),0_0_0_1px_var(--line)] transition-[left,width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
@@ -310,7 +317,7 @@ function Tabs<T extends string>({ value, onChange, options }: { value: T; onChan
           role="tab"
           aria-selected={id === value}
           onClick={() => onChange(id)}
-          className={`voice relative z-10 flex h-7 items-center gap-1.5 rounded-btn px-3 text-xs font-medium transition-colors ${id === value ? "text-text" : "text-muted hover:text-text"}`}
+          className={`voice relative z-10 flex h-7 shrink-0 items-center gap-1.5 rounded-btn px-2.5 text-xs font-medium transition-colors ${id === value ? "text-text" : "text-muted hover:text-text"}`}
         >
           {label}
           {count === true ? <span className="size-1.5 rounded-full bg-accent" /> : count ? <span className="font-mono text-[10px] text-muted">{count}</span> : null}
@@ -572,15 +579,30 @@ function ParamsEditor({ url, onChange }: { url: string; onChange: (url: string) 
   );
 }
 
-type ReqTab = "params" | "headers" | "auth" | "body";
+type ReqTab = "params" | "headers" | "auth" | "body" | "capture";
 
-export function RequestEditor({ req, vars, onChange }: { req: Req; vars: Header[]; onChange: (p: Partial<Req>) => void }) {
+export function RequestEditor({
+  req,
+  vars,
+  envName,
+  result,
+  onChange,
+}: {
+  req: Req;
+  vars: Header[];
+  /** The active environment, where captures are saved. */
+  envName?: string;
+  /** The response on show, to preview captures against. */
+  result?: SendResult;
+  onChange: (p: Partial<Req>) => void;
+}) {
   const [tab, setTab] = useState<ReqTab>("params");
   const params = parseParams(req.url).length;
   const headers = req.headers.filter(([k]) => k.trim()).length;
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 overflow-x-auto [scrollbar-width:none]">
         <Tabs
           value={tab}
           onChange={setTab}
@@ -589,9 +611,11 @@ export function RequestEditor({ req, vars, onChange }: { req: Req; vars: Header[
             ["headers", "Headers", headers || undefined],
             ["auth", "Auth", !!req.auth],
             ["body", "Body"],
+            ["capture", "Capture", req.captures?.filter((c) => c.name.trim()).length || undefined],
           ]}
         />
-        <CopyButton label="cURL" icon={ICONS.terminal} text={() => reqCurl(req, vars)} />
+        </div>
+        <CopyButton label="cURL" compact icon={ICONS.terminal} text={() => reqCurl(req, vars)} />
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {tab === "params" ? (
@@ -600,12 +624,87 @@ export function RequestEditor({ req, vars, onChange }: { req: Req; vars: Header[
           <KVEditor rows={req.headers} onChange={(headers) => onChange({ headers })} keyLabel="Header" />
         ) : tab === "auth" ? (
           <AuthEditor auth={req.auth} onChange={(auth) => onChange({ auth })} />
+        ) : tab === "capture" ? (
+          <CaptureEditor captures={req.captures ?? []} envName={envName} result={result} onChange={(captures) => onChange({ captures })} />
         ) : BODYLESS.has(req.method) ? (
           <Empty title={`${req.method} requests have no body`} note="Switch the method to POST, PUT or PATCH to send one." />
         ) : (
           <BodyEditor req={req} onChange={onChange} />
         )}
       </div>
+    </div>
+  );
+}
+
+/** Picks values out of a response to save as variables, previewing each against the response on show. */
+function CaptureEditor({ captures, envName, result, onChange }: { captures: Capture[]; envName?: string; result?: SendResult; onChange: (c: Capture[]) => void }) {
+  const set = (i: number, patch: Partial<Capture>) => onChange(captures.map((c, j) => (j === i ? { ...c, ...patch } : c)));
+  const add = () => onChange([...captures, { name: "", from: "body", path: "" }]);
+  const preview = useMemo(() => (result ? extract(result, captures.map((c) => ({ ...c, name: c.name || "_" }))) : []), [result, captures]);
+  const field =
+    "h-8 rounded-[6px] bg-transparent px-2 font-mono text-[12.5px] outline-none transition-colors duration-150 placeholder:text-muted/60 hover:bg-raised/70 focus:bg-raised";
+
+  if (!captures.length)
+    return (
+      <div className="flex h-full min-h-40 flex-col items-center justify-center gap-3 text-center">
+        <div className="text-sm font-semibold">Chain requests</div>
+        <p className="max-w-80 text-xs text-muted">
+          Save part of this response, like a login token, as a variable. Other requests use it as <code className="font-mono text-text">{"{{token}}"}</code>.
+        </p>
+        <button type="button" onClick={add} className="btn btn-ghost voice h-7 px-3 text-xs">
+          + Add capture
+        </button>
+      </div>
+    );
+
+  return (
+    <div className="flex flex-col">
+      {captures.map((c, i) => {
+        const value = preview[i]?.value;
+        return (
+          <div key={i} className="group border-b border-line py-1">
+            <div className="flex items-center gap-2">
+              <input value={c.name} onChange={(e) => set(i, { name: e.target.value })} placeholder="token" spellCheck={false} aria-label="Variable" className={`${field} w-[28%] min-w-20 text-text`} />
+              <button
+                type="button"
+                onClick={() => set(i, { from: c.from === "body" ? "header" : "body" })}
+                title={`Reading the response ${c.from}. Click to read a ${c.from === "body" ? "header" : "body path"} instead.`}
+                className="voice h-6 w-[60px] shrink-0 rounded-btn bg-raised text-[11px] font-medium text-muted transition-colors hover:bg-text/10 hover:text-text"
+              >
+                {CAPTURE_FROM.find((f) => f.id === c.from)!.name}
+              </button>
+              <input
+                value={c.path}
+                onChange={(e) => set(i, { path: e.target.value })}
+                placeholder={c.from === "body" ? "data.token" : "X-Request-Id"}
+                spellCheck={false}
+                aria-label={c.from === "body" ? "JSON path" : "Header name"}
+                className={`${field} min-w-0 flex-1 text-muted focus:text-text`}
+              />
+              <button
+                type="button"
+                onClick={() => onChange(captures.filter((_, j) => j !== i))}
+                className="btn btn-ghost btn-icon size-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                aria-label={`Remove ${c.name || "capture"}`}
+              >
+                <Icon d={ICONS.x} />
+              </button>
+            </div>
+            {result && (
+              <div className="truncate pr-9 pl-2 font-mono text-[11.5px]" title={value}>
+                {value === undefined ? <span className="text-err/80">not in this response</span> : <span className="text-muted">= {value || '""'}</span>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <button type="button" onClick={add} className="mt-1.5 self-start rounded-[6px] px-2 py-1 text-[12.5px] text-muted transition-colors hover:bg-raised hover:text-text">
+        + Add capture
+      </button>
+      <p className="mt-3 px-2 text-[12px] text-muted">
+        After a 2xx response, each value is saved to {envName ? <span className="text-text">{envName}</span> : "a new Default environment"}. Body paths look like{" "}
+        <code className="font-mono text-text">data.items[0].id</code>; leave it empty for the whole body.
+      </p>
     </div>
   );
 }

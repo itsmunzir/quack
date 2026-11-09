@@ -91,6 +91,7 @@ A teammate who clones the repo gets the same requests and fills in their own sec
 Bring your work with you. Open the space menu and choose **Import collection…**
 
 - **Postman** collections (v2 and v2.1, JSON or YAML). Requests inside folders come along, named after their folder, and so does auth.
+  Test scripts that save a response value, like `pm.environment.set("token", pm.response.json().token)`, become captures.
 - **OpenAPI 3** and **Swagger 2** specs. Every endpoint becomes a request, the server becomes `{{baseUrl}}`,
   path params become variables and example bodies are filled in.
 - **cURL**. Paste a command into the URL bar and it turns into a request, headers, auth and all.
@@ -111,6 +112,8 @@ Leaving is just as easy: export any space, back up everything in one file, or co
 - Environments per space: write `{{variable}}` in a URL, header, body or auth field
 - A preview line under the URL shows exactly where the request will go
 - Bearer, Basic and API key (header or query) auth
+- Request chaining: capture a token or ID from one response, by JSON path or header, and every other
+  request can use it as `{{token}}`. No scripts to write, with a live preview of what each path picks out
 
 **Finding your way**
 - Spaces: up to nine collections, each wearing its own theme, one keystroke apart

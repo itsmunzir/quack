@@ -2,6 +2,7 @@ import yaml from "js-yaml";
 import type { Header } from "./api";
 import type { Auth } from "./auth";
 import type { BodyType, FormField } from "./body";
+import type { Capture } from "./capture";
 import { cleanSpaces, newReq, uid, type Env, type Req, type Space } from "./store";
 import { DEFAULT_THEME } from "./themes";
 
@@ -74,6 +75,7 @@ interface PmRequest {
 }
 interface PmItem {
   name?: string;
+  event?: { listen?: string; script?: { exec?: string[] | string } }[];
   item?: PmItem[];
   request?: PmRequest | string;
   auth?: PmAuth;
@@ -101,6 +103,31 @@ function pmUrl(u: PmRequest["url"]): string {
   if (u?.raw) return u.raw;
   const join = (p: string[] | string | undefined, sep: string) => (Array.isArray(p) ? p.join(sep) : str(p));
   return u ? `${join(u.host, ".")}/${join(u.path, "/")}` : "";
+}
+
+/** A JSON path after the body, like `.data.items[0]["odd key"]`. */
+const JS_PATH = String.raw`((?:\.\w+|\[\s*\d+\s*\]|\[\s*["'][^"'\]]+["']\s*\])*)`;
+/** The start of a call that saves a variable: `pm.environment.set("name", ` and friends. */
+const JS_SET = String.raw`(?:pm\.(?:environment|collectionVariables|globals|variables)\.set|postman\.set(?:Environment|Global)Variable)\(\s*["'\x60]([\w.-]+)["'\x60]\s*,\s*`;
+
+/**
+ * Turns the common test-script lines that save part of a response into captures, such as
+ * `pm.environment.set("token", pm.response.json().data.token)`. Anything cleverer is left behind.
+ */
+export function pmCaptures(events: PmItem["event"]): Capture[] | undefined {
+  const script = (Array.isArray(events) ? events : [])
+    .filter((e) => e?.listen === "test")
+    .map((e) => (Array.isArray(e.script?.exec) ? e.script.exec.join("\n") : str(e.script?.exec)))
+    .join("\n");
+  if (!script) return undefined;
+  // Names that hold the parsed body, like `const data = pm.response.json();`
+  const aliases = [...script.matchAll(/(?:var|let|const)\s+(\w+)\s*=\s*(?:pm\.response\.json\(\)|JSON\.parse\(\s*responseBody\s*\))/g)].map((m) => m[1]);
+  const body = [String.raw`pm\.response\.json\(\)`, String.raw`JSON\.parse\(\s*responseBody\s*\)`, ...aliases.map((a) => `\\b${a}\\b`)].join("|");
+  const out: Capture[] = [];
+  for (const m of script.matchAll(new RegExp(`${JS_SET}(?:${body})${JS_PATH}\\s*\\)`, "g"))) out.push({ name: m[1], from: "body", path: m[2].replace(/^\./, "") });
+  const header = String.raw`pm\.response\.headers\.get\(\s*["'\x60]([^"'\x60]+)["'\x60]\s*\)\s*\)`;
+  for (const m of script.matchAll(new RegExp(JS_SET + header, "g"))) out.push({ name: m[1], from: "header", path: m[2] });
+  return out.length ? out : undefined;
 }
 
 function postman(c: PmCollection): Space {
@@ -138,6 +165,7 @@ function postman(c: PmCollection): Space {
           bodyType,
           form,
           auth: (reqAuth === null ? auth : reqAuth) ?? undefined,
+          captures: pmCaptures(it.event),
         }),
       );
     }
