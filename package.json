@@ -1,7 +1,7 @@
 {
   "name": "quack",
   "private": true,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A fast, open source, offline API client for Windows, macOS and Linux. No account, no cloud, no telemetry.",
   "keywords": [
     "api-client",

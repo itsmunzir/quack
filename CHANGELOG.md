@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 · 2026-11-10
 
 - **Menu** at the foot of the sidebar: import, export and back up, keyboard shortcuts, report an issue,
   and the version with a link to releases.
