@@ -179,7 +179,7 @@ pub fn run() {
     let builder = tauri::Builder::default();
     // Left out of unit tests: on Windows it needs the app manifest, which test binaries lack.
     #[cfg(not(test))]
-    let builder = builder.plugin(tauri_plugin_dialog::init());
+    let builder = builder.plugin(tauri_plugin_dialog::init()).plugin(tauri_plugin_opener::init());
     builder
         .manage(engine)
         .manage(InFlight::default())

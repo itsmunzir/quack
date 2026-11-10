@@ -5,6 +5,7 @@ import { backupAll, exportSpace, importFile } from "./files";
 import { folderName, openFolder, saveToFolder, unlinkFolder } from "./sync";
 import { Icon, ICONS, methodColor, methodShort, reqCode, SpaceDot } from "./ui";
 import { LANGS } from "./codegen";
+import { issueUrl, openLink, REPO, VERSION } from "./links";
 
 interface Item {
   id: string;
@@ -17,7 +18,19 @@ interface Item {
 }
 
 /** Ctrl K: jump to any request or space, or run an action. */
-export function Palette({ open, onClose, onMode, onToggleGlow }: { open: boolean; onClose: () => void; onMode: (m: Mode) => void; onToggleGlow: () => void }) {
+export function Palette({
+  open,
+  onClose,
+  onMode,
+  onToggleGlow,
+  onShortcuts,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onMode: (m: Mode) => void;
+  onToggleGlow: () => void;
+  onShortcuts: () => void;
+}) {
   const ws = useWorkspace();
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
@@ -90,14 +103,17 @@ export function Palette({ open, onClose, onMode, onToggleGlow }: { open: boolean
     out.push(
       { id: "theme-all", group: "Appearance", label: "Use this theme for all spaces", icon: <Icon d={ICONS.palette} />, run: () => ws.setAllThemes(ws.space.theme) },
       { id: "glow", group: "Appearance", label: "Toggle glow", icon: <Icon d={ICONS.palette} />, run: onToggleGlow },
+      { id: "shortcuts", group: "Help", label: "Keyboard shortcuts", icon: <Icon d={ICONS.keyboard} />, hint: "Ctrl /", run: onShortcuts },
+      { id: "issue", group: "Help", label: "Report an issue", detail: "Opens GitHub in your browser", icon: <Icon d={ICONS.alert} />, run: () => openLink(issueUrl()) },
+      { id: "github", group: "Help", label: "Quack on GitHub", detail: `Version ${VERSION}`, icon: <Icon d={ICONS.code} />, run: () => openLink(REPO) },
     );
     return out;
-  }, [ws, onMode, onToggleGlow]);
+  }, [ws, onMode, onToggleGlow, onShortcuts]);
 
   const shown = useMemo(() => {
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
     // Themes only show up when searched for, to keep the default list short.
-    const hits = terms.length ? items.filter((it) => terms.every((t) => `${it.label} ${it.detail ?? ""} ${it.group}`.toLowerCase().includes(t))) : items.filter((it) => it.group !== "Appearance");
+    const hits = terms.length ? items.filter((it) => terms.every((t) => `${it.label} ${it.detail ?? ""} ${it.group}`.toLowerCase().includes(t))) : items.filter((it) => it.group !== "Appearance" && it.group !== "Help");
     return hits.slice(0, 40);
   }, [q, items]);
 

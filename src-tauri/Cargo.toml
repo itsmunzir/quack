@@ -32,6 +32,7 @@ reqwest = { version = "0.13.5", default-features = false, features = [
   "multipart",
 ] }
 tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }

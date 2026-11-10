@@ -323,6 +323,12 @@ body {
     transform: translateY(-4px) scale(0.99);
   }
 }
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+  }
+}
 @keyframes shimmer {
   to {
     background-position: -200% 0;
@@ -331,6 +337,26 @@ body {
 
 .pop {
   animation: drop 150ms var(--ease) both;
+}
+.pop-up {
+  animation: rise 150ms var(--ease) both;
+}
+
+/* The dithered glow behind the duck on an empty response. The mask is drawn in dither.ts. */
+.dither-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  pointer-events: none;
+  background: var(--accent);
+  opacity: 0.5;
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+}
+/* Ink's accent is the text colour itself, so it needs far less to read as a glow. */
+[data-theme="ink"] .dither-glow {
+  opacity: 0.16;
 }
 .enter {
   animation: fade 200ms var(--ease) both;

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Menu** at the foot of the sidebar: import, export and back up, keyboard shortcuts, report an issue,
+  and the version with a link to releases.
+- **Report an issue** opens a bug report on GitHub with your version and system filled in. Nothing is sent
+  from the app; you see the form and submit it yourself.
+- **Keyboard shortcuts** on `Ctrl /`, all in one list.
+- The empty response panel shows the keys worth knowing, with the duck on a dithered glow in your theme's colour.
+
 ## 0.1.3 · 2026-11-09
 
 - **Request chaining.** Capture a value from a response, by JSON path or header, into an environment

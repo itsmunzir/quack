@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { isTauri, type Header, type SendResult } from "./api";
 import { BODYLESS, METHODS, parseParams, withParams, type Outcome, type Req } from "./store";
 import { MODES, THEMES, type Mode, type ThemeId } from "./themes";
 import { Duck } from "./Duck";
+import { GLOW, glowMask } from "./dither";
 import { isCurl, parseCurl } from "./curl";
 import { LANGS, toCode, type Lang } from "./codegen";
 import { hasVars, prepare, resolve } from "./env";
@@ -86,6 +87,10 @@ export const ICONS = {
   folder: "M2 4.5a1 1 0 0 1 1-1h3.2l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z",
   lock: "M4.5 7.5V5.5a3.5 3.5 0 0 1 7 0v2M3.5 7.5h9v6h-9z",
   palette: "M8 14.5A6.5 6.5 0 1 1 14.5 8c0 1.5-1.2 2.3-2.5 2.3h-1.3a1.2 1.2 0 0 0-.8 2.1c.5.6.1 2.1-1.9 2.1zM4.8 7.5h0M6.8 4.8h0M10 4.8h0",
+  gear: "M2.5 5.5h6M12.5 5.5h1M2.5 10.5h1M7.5 10.5h6M10.5 7a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM5.5 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z",
+  external: "M9.5 2.5h4v4M13.5 2.5L8 8M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3",
+  keyboard: "M2.5 4h11a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM4.5 6.8h0M7 6.8h0M9 6.8h0M11.5 6.8h0M5.5 9.3h5",
+  alert: "M8 14.5A6.5 6.5 0 1 0 8 1.5a6.5 6.5 0 0 0 0 13zM8 4.8v3.7M8 11.2h0",
 };
 
 /** Copies to the clipboard and briefly confirms it. */
@@ -164,10 +169,12 @@ export function MethodBadge({ method }: { method: string }) {
 
 /* ─── Menus ─────────────────────────────────────────────────────────────── */
 
-export function Menu({ children, align = "left", width = "w-36" }: { children: ReactNode; align?: "left" | "right"; width?: string }) {
+export function Menu({ children, align = "left", width = "w-36", up }: { children: ReactNode; align?: "left" | "right"; width?: string; up?: boolean }) {
+  const side = up ? "bottom-full mb-1.5" : "top-full mt-1.5";
+  const origin = up ? (align === "right" ? "origin-bottom-right" : "origin-bottom-left") : align === "right" ? "origin-top-right" : "origin-top-left";
   return (
     <div
-      className={`pop absolute top-full z-30 mt-1.5 ${width} ${align === "right" ? "right-0 origin-top-right" : "left-0 origin-top-left"} rounded-box border border-line bg-surface p-1 text-text shadow-[0_16px_40px_-10px_rgb(0_0_0/0.3)]`}
+      className={`${up ? "pop-up" : "pop"} absolute z-30 ${side} ${width} ${align === "right" ? "right-0" : "left-0"} ${origin} rounded-box border border-line bg-surface p-1 text-text shadow-[0_16px_40px_-10px_rgb(0_0_0/0.3)]`}
       role="menu"
     >
       {children}
@@ -179,7 +186,7 @@ export function MenuItem({ active, onClick, children }: { active?: boolean; onCl
   return (
     <button
       type="button"
-      role="menuitemradio"
+      role={active === undefined ? "menuitem" : "menuitemradio"}
       aria-checked={active}
       onClick={onClick}
       className={`flex h-8 w-full items-center gap-2.5 rounded-btn px-2.5 text-left transition-colors ${active ? "bg-raised" : "hover:bg-raised"}`}
@@ -871,7 +878,7 @@ export function ResponseView({ outcome, meta }: { outcome?: Outcome; meta: (r: S
         <pre className="font-mono text-[13px] whitespace-pre-wrap text-text">{outcome.error}</pre>
       </div>
     );
-  if (!r) return <Empty title="Ready when you are" note="Type a URL and hit Send, or press Ctrl + Enter." mascot />;
+  if (!r) return <Ready />;
   return (
     <div key={outcome!.seq} className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -920,12 +927,42 @@ function Loading() {
   );
 }
 
-function Empty({ title, note, mascot }: { title: string; note?: string; mascot?: boolean }) {
+function Empty({ title, note }: { title: string; note?: string }) {
   return (
     <div className="flex h-full min-h-40 flex-col items-center justify-center gap-3 text-center">
-      {mascot && <Duck size={56} className="text-text opacity-80" />}
       <div className="text-sm font-semibold">{title}</div>
       {note && <p className="max-w-72 text-xs text-muted">{note}</p>}
+    </div>
+  );
+}
+
+const READY_KEYS: [string, string][] = [
+  ["Send request", "Ctrl Enter"],
+  ["New request", "Ctrl N"],
+  ["Command bar", "Ctrl K"],
+  ["All shortcuts", "Ctrl /"],
+];
+
+/** Before the first send: the duck on a dithered glow, and the few keys worth knowing. */
+function Ready() {
+  const mask = useMemo(glowMask, []);
+  return (
+    <div className="flex h-full min-h-40 flex-col items-center justify-center gap-5 text-center">
+      <div className="relative grid size-16 place-items-center">
+        <span aria-hidden="true" className="dither-glow" style={{ width: GLOW.width, height: GLOW.height, maskImage: `url(${mask})` }} />
+        <Duck size={56} className="relative text-text" />
+      </div>
+      <div className="relative text-sm font-semibold">Ready when you are</div>
+      <dl className="relative grid grid-cols-[auto_auto] items-center gap-x-4 gap-y-2 text-xs">
+        {READY_KEYS.map(([what, keys]) => (
+          <Fragment key={what}>
+            <dt className="text-right text-muted">{what}</dt>
+            <dd className="text-left">
+              <span className="kbd kbd-quiet">{keys}</span>
+            </dd>
+          </Fragment>
+        ))}
+      </dl>
     </div>
   );
 }

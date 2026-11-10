@@ -1,9 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useWorkspaceState, WorkspaceContext } from "./store";
 import { applyGlow, applyMode, applyTheme, loadGlow, loadMode, nextTheme, onSystemModeChange } from "./themes";
 import { ThemePicker } from "./ui";
 import { Palette } from "./Palette";
 import { Spaces } from "./Spaces";
+import { AppMenu } from "./AppMenu";
+import { Shortcuts } from "./Shortcuts";
 import { useFolderSync } from "./sync";
 
 export default function App() {
@@ -13,6 +15,8 @@ export default function App() {
   const [glow, setGlow] = useState(loadGlow);
   const [palette, setPalette] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [shortcuts, setShortcuts] = useState(false);
+  const closeShortcuts = useCallback(() => setShortcuts(false), []);
   const { theme } = ws.space;
 
   // Layout effect so a space's theme is painted before the first frame, with no flash.
@@ -35,6 +39,7 @@ export default function App() {
     if (e.key === "Enter") run(() => (ws.outcome?.sending ? ws.cancel(ws.req.id) : ws.send()));
     else if (e.shiftKey && key === "t") run(() => ws.setSpaceTheme(ws.space.id, nextTheme(theme)));
     else if (key === "k") run(() => setPalette((p) => !p));
+    else if (e.key === "/") run(() => setShortcuts((s) => !s));
     else if (key === "h") run(() => setShowHistory((h) => !h));
     else if (key === "e") run(() => {
       // Cycles through the space's environments, then none.
@@ -70,11 +75,19 @@ export default function App() {
             onGlow={setGlow}
           />
         }
+        menu={<AppMenu onShortcuts={() => setShortcuts(true)} />}
         openPalette={() => setPalette(true)}
         showHistory={showHistory}
         onToggleHistory={() => setShowHistory((h) => !h)}
       />
-      <Palette open={palette} onClose={() => setPalette(false)} onMode={setMode} onToggleGlow={() => setGlow((g) => !g)} />
+      <Palette
+        open={palette}
+        onClose={() => setPalette(false)}
+        onMode={setMode}
+        onToggleGlow={() => setGlow((g) => !g)}
+        onShortcuts={() => setShortcuts(true)}
+      />
+      <Shortcuts open={shortcuts} onClose={closeShortcuts} />
     </WorkspaceContext.Provider>
   );
 }

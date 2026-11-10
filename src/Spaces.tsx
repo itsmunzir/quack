@@ -31,11 +31,13 @@ import { folderName, openFolder, saveToFolder, unlinkFolder } from "./sync";
  */
 export function Spaces({
   appearance,
+  menu,
   openPalette,
   showHistory,
   onToggleHistory,
 }: {
   appearance: ReactNode;
+  menu: ReactNode;
   openPalette: () => void;
   showHistory: boolean;
   onToggleHistory: () => void;
@@ -101,7 +103,10 @@ export function Spaces({
           </nav>
         )}
 
-        <SpaceDots />
+        <div className="flex items-center justify-between pl-1.5">
+          <SpaceDots />
+          {menu}
+        </div>
       </aside>
 
       <Notice />
@@ -254,7 +259,7 @@ function Pins() {
 function SpaceDots() {
   const ws = useWorkspace();
   return (
-    <div className="flex items-center justify-center gap-2.5 pt-1">
+    <div className="flex items-center gap-2.5">
       {ws.spaces.map((s, i) => {
         const on = s.id === ws.space.id;
         return (
